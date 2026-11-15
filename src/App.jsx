@@ -16,7 +16,8 @@ import {
 import CesiumGlobe from "./CesiumGlobe";
 import LiveEventsPanel from "./LiveEventsPanel";
 import CountryEmissionsProfile from "./CountryEmissionsProfile";
-
+import OrbitalDebrisMonitor from "./OrbitalDebrisMonitor";
+import OrbitalDebrisSimulation from "./OrbitalDebrisSimulation";
 import {
   fetchLiveEarthData,
   fetchSelectedLocationData,
@@ -492,8 +493,11 @@ function App() {
 
         {/* NEW: EDGAR country emissions profile */}
         {selectedLocation && (
-          <CountryEmissionsProfile country={selectedLocation} />
-        )}
+  <CountryEmissionsProfile country={selectedLocation} />
+)}
+
+<OrbitalDebrisMonitor />
+<OrbitalDebrisSimulation />
 
         {/* Environmental indicators */}
         <section className="indicators-section" id="indicators">
