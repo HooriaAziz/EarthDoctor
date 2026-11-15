@@ -6,13 +6,13 @@ import {
   Viewer,
   Cartesian3,
   Color,
-  ColorMaterialProperty,
   Math as CesiumMath,
   GeoJsonDataSource,
   UrlTemplateImageryProvider,
   ImageryLayer,
   ScreenSpaceEventHandler,
   ScreenSpaceEventType,
+  HeightReference,
 } from "cesium";
 
 const COUNTRY_NAME_KEYS = [
@@ -26,8 +26,9 @@ const COUNTRY_NAME_KEYS = [
   "name_alt",
 ];
 
-const BASE_COUNTRY_FILL = Color.fromCssColorString("#42BFFF").withAlpha(0.035);
-const HOVER_COUNTRY_FILL = Color.fromCssColorString("#38D5FF").withAlpha(0.48);
+const COUNTRY_OVERLAY_HEIGHT = 100;
+const BASE_COUNTRY_FILL = Color.fromCssColorString("#42BFFF").withAlpha(0.025);
+const HOVER_COUNTRY_FILL = Color.fromCssColorString("#00D9FF").withAlpha(0.9);
 
 function readCountryName(properties) {
   if (!properties) return null;
@@ -37,7 +38,9 @@ function readCountryName(properties) {
     if (property == null) continue;
 
     const value =
-      typeof property.getValue === "function" ? property.getValue() : property;
+      typeof property.getValue === "function"
+        ? property.getValue()
+        : property;
 
     if (typeof value === "string" && value.trim()) {
       return value.trim();
@@ -50,16 +53,57 @@ function readCountryName(properties) {
 function normalizeCountryName(name) {
   return String(name || "")
     .trim()
-    .toLocaleLowerCase()
+    .toLowerCase()
     .replace(/[^a-z0-9]/g, "");
 }
 
-export default function CesiumGlobe({ onCountrySelect }) {
+function getEventColor(event) {
+  const category = String(event.category || "").toLowerCase();
+
+  if (category.includes("fire") || category.includes("volcano")) {
+    return Color.fromCssColorString("#FF8A43");
+  }
+
+  if (category.includes("earthquake")) {
+    return Color.fromCssColorString("#62D9FF");
+  }
+
+  if (category.includes("storm") || category.includes("flood")) {
+    return Color.fromCssColorString("#8CAEFF");
+  }
+
+  return Color.fromCssColorString("#71E5CF");
+}
+
+function createGlowImage(color) {
+  const [red, green, blue] = color.toBytes();
+  const rgb = `rgb(${red}, ${green}, ${blue})`;
+
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="128" height="128">
+      <defs>
+        <radialGradient id="glow">
+          <stop offset="0%" stop-color="${rgb}" stop-opacity="0.9"/>
+          <stop offset="15%" stop-color="${rgb}" stop-opacity="0.65"/>
+          <stop offset="40%" stop-color="${rgb}" stop-opacity="0.25"/>
+          <stop offset="75%" stop-color="${rgb}" stop-opacity="0.07"/>
+          <stop offset="100%" stop-color="${rgb}" stop-opacity="0"/>
+        </radialGradient>
+      </defs>
+      <circle cx="64" cy="64" r="64" fill="url(#glow)"/>
+    </svg>
+  `;
+
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+}
+
+export default function CesiumGlobe({ onCountrySelect, liveEvents = [] }) {
   const mapRef = useRef(null);
+  const viewerRef = useRef(null);
+  const eventEntitiesRef = useRef([]);
   const onCountrySelectRef = useRef(onCountrySelect);
   const countryGeoJSONRef = useRef(null);
 
-  // Keep the latest callback without rebuilding the Cesium viewer.
   onCountrySelectRef.current = onCountrySelect;
 
   useEffect(() => {
@@ -67,10 +111,18 @@ export default function CesiumGlobe({ onCountrySelect }) {
 
     let cancelled = false;
     let hoveredEntity = null;
-    let previousHoverMaterial = null;
+
+    let previousHoverMaterial;
+    let previousHoverHeight;
+    let previousHoverOutline;
+    let previousHoverOutlineColor;
+    let previousHoverFill;
+    let previousHoverShow;
+
     let lastHoverCheck = 0;
 
     const countryEntityByName = new Map();
+    const countryEntityById = new Map();
 
     const viewer = new Viewer(mapRef.current, {
       baseLayer: false,
@@ -86,7 +138,8 @@ export default function CesiumGlobe({ onCountrySelect }) {
       navigationHelpButton: false,
     });
 
-    // Satellite imagery basemap.
+    viewerRef.current = viewer;
+
     const satelliteProvider = new UrlTemplateImageryProvider({
       url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
       credit: "Imagery © Esri and its imagery providers",
@@ -94,8 +147,6 @@ export default function CesiumGlobe({ onCountrySelect }) {
 
     viewer.imageryLayers.add(new ImageryLayer(satelliteProvider));
 
-    // Use the same geographic lookup for hover and click. This avoids relying
-    // on Cesium's visual picking of translucent GeoJSON polygons.
     function getSurfaceCoordinates(screenPosition) {
       const cartesian = viewer.camera.pickEllipsoid(
         screenPosition,
@@ -115,61 +166,90 @@ export default function CesiumGlobe({ onCountrySelect }) {
 
     function findCountryFeature(latitude, longitude) {
       const geojson = countryGeoJSONRef.current;
+
       if (!geojson?.features?.length) return null;
 
-      const clickedPoint = point([longitude, latitude]);
+      const mapPoint = point([longitude, latitude]);
 
-      return (
-        geojson.features.find((feature) => {
-          if (!feature?.geometry) return false;
+      for (const feature of geojson.features) {
+        if (!feature?.geometry) continue;
 
-          try {
-            return booleanPointInPolygon(clickedPoint, feature);
-          } catch (error) {
-            console.warn("Could not check one country feature:", error);
-            return false;
+        try {
+          if (booleanPointInPolygon(mapPoint, feature)) {
+            return feature;
           }
-        }) || null
-      );
+        } catch (error) {
+          // Skip malformed features so one bad shape does not break map interaction.
+        }
+      }
+
+      return null;
     }
 
     function clearHoveredCountry() {
-      if (hoveredEntity?.polygon && previousHoverMaterial) {
-        hoveredEntity.polygon.material = previousHoverMaterial;
+      if (hoveredEntity?.polygon) {
+        hoveredEntity.polygon.material =
+          previousHoverMaterial ?? BASE_COUNTRY_FILL;
+        hoveredEntity.polygon.height =
+          previousHoverHeight ?? COUNTRY_OVERLAY_HEIGHT;
+        hoveredEntity.polygon.outline = previousHoverOutline ?? false;
+        hoveredEntity.polygon.outlineColor =
+          previousHoverOutlineColor ?? Color.TRANSPARENT;
+        hoveredEntity.polygon.fill = previousHoverFill ?? true;
+        hoveredEntity.polygon.show = previousHoverShow ?? true;
       }
 
       hoveredEntity = null;
-      previousHoverMaterial = null;
+      previousHoverMaterial = undefined;
+      previousHoverHeight = undefined;
+      previousHoverOutline = undefined;
+      previousHoverOutlineColor = undefined;
+      previousHoverFill = undefined;
+      previousHoverShow = undefined;
       viewer.scene.canvas.style.cursor = "";
     }
 
-    function highlightCountry(entity) {
+    function highlightCountry(entity, countryName) {
       if (!entity?.polygon || entity === hoveredEntity) return;
 
       clearHoveredCountry();
-
       hoveredEntity = entity;
+
       previousHoverMaterial = entity.polygon.material;
-      entity.polygon.material = new ColorMaterialProperty(HOVER_COUNTRY_FILL);
+      previousHoverHeight = entity.polygon.height;
+      previousHoverOutline = entity.polygon.outline;
+      previousHoverOutlineColor = entity.polygon.outlineColor;
+      previousHoverFill = entity.polygon.fill;
+      previousHoverShow = entity.polygon.show;
+
+      entity.polygon.show = true;
+      entity.polygon.fill = true;
+      entity.polygon.height = 5000;
+      entity.polygon.material = HOVER_COUNTRY_FILL;
+      entity.polygon.outline = true;
+      entity.polygon.outlineColor = Color.WHITE;
+
       viewer.scene.canvas.style.cursor = "pointer";
+      console.log("Highlighted country:", countryName);
+      console.log("Polygon fill enabled:", entity.polygon.fill);
     }
 
-    // Load country shapes once. Keep the raw GeoJSON for Turf matching and
-    // index Cesium entities by country name for the hover highlight.
     async function loadCountryShapes() {
       try {
         const response = await fetch("/data/country-shapes.geojson");
 
         if (!response.ok) {
           throw new Error(
-            `Country GeoJSON request failed with HTTP ${response.status}`
+            `Country GeoJSON request failed: HTTP ${response.status}`
           );
         }
 
         const geojson = await response.json();
 
         if (!Array.isArray(geojson.features)) {
-          throw new Error("The country GeoJSON does not contain a features array.");
+          throw new Error(
+            "The country GeoJSON does not contain a features array."
+          );
         }
 
         if (cancelled || viewer.isDestroyed()) return;
@@ -185,23 +265,27 @@ export default function CesiumGlobe({ onCountrySelect }) {
 
         if (cancelled || viewer.isDestroyed()) return;
 
-        viewer.dataSources.add(dataSource);
-
         for (const entity of dataSource.entities.values) {
-          const countryName = readCountryName(entity.properties);
-          const key = normalizeCountryName(countryName);
+          if (!entity.polygon) continue;
 
-          if (key && entity.polygon) {
-            countryEntityByName.set(key, entity);
+          entity.polygon.height = COUNTRY_OVERLAY_HEIGHT;
+
+          const entityName =
+            readCountryName(entity.properties) || entity.name || "";
+          const nameKey = normalizeCountryName(entityName);
+
+          if (nameKey) countryEntityByName.set(nameKey, entity);
+          if (entity.id != null) {
+            countryEntityById.set(String(entity.id), entity);
           }
         }
 
+        viewer.dataSources.add(dataSource);
+
         console.log("Country shapes loaded:", geojson.features.length);
-        console.log("Country hover entities ready:", countryEntityByName.size);
+        console.log("Country hover polygons ready:", countryEntityByName.size);
       } catch (error) {
-        if (!cancelled) {
-          console.error("Country shapes failed:", error);
-        }
+        if (!cancelled) console.error("Country shapes failed:", error);
       }
     }
 
@@ -209,18 +293,14 @@ export default function CesiumGlobe({ onCountrySelect }) {
 
     const handler = new ScreenSpaceEventHandler(viewer.scene.canvas);
 
-    // Hover: find the country under the pointer using its real coordinates,
-    // then brighten the matching Cesium polygon entity.
     handler.setInputAction((movement) => {
       if (!countryGeoJSONRef.current) return;
 
-      // Limit the geographic lookup frequency to keep mouse movement smooth.
       const now = Date.now();
-      if (now - lastHoverCheck < 55) return;
+      if (now - lastHoverCheck < 45) return;
       lastHoverCheck = now;
 
       const coordinates = getSurfaceCoordinates(movement.endPosition);
-
       if (!coordinates) {
         clearHoveredCountry();
         return;
@@ -236,79 +316,134 @@ export default function CesiumGlobe({ onCountrySelect }) {
         return;
       }
 
-      const featureName = readCountryName(feature.properties);
-      const entity = countryEntityByName.get(normalizeCountryName(featureName));
+      const countryName =
+        readCountryName(feature.properties) || feature.id || "Unknown country";
+      const featureId = feature.id == null ? null : String(feature.id);
+      const entity =
+        (featureId && countryEntityById.get(featureId)) ||
+        countryEntityByName.get(normalizeCountryName(countryName));
 
       if (!entity) {
         clearHoveredCountry();
         return;
       }
 
-      highlightCountry(entity);
+      highlightCountry(entity, countryName);
     }, ScreenSpaceEventType.MOUSE_MOVE);
 
-    // Click: select a country and pass its name and clicked coordinates to App.jsx.
     handler.setInputAction((movement) => {
       const coordinates = getSurfaceCoordinates(movement.position);
 
       if (!coordinates) {
-        console.log("Could not determine clicked coordinates. Click on the globe.");
+        console.log("Could not determine clicked coordinates.");
         return;
       }
 
       const { latitude, longitude } = coordinates;
-      const matchedFeature = findCountryFeature(latitude, longitude);
+      const feature = findCountryFeature(latitude, longitude);
 
-      if (!matchedFeature) {
+      if (!feature) {
         console.log("No country found at these coordinates:", coordinates);
         return;
       }
 
-      const countryName = readCountryName(matchedFeature.properties);
-
+      const countryName = readCountryName(feature.properties);
       if (!countryName) {
         console.log("The matched GeoJSON feature has no country name.");
         return;
       }
 
-      const selectedLocation = {
-        name: countryName,
-        latitude,
-        longitude,
-      };
-
-      console.log("Selected country:", selectedLocation.name);
+      console.log("Selected country:", countryName);
       console.log("Clicked coordinates:", { latitude, longitude });
 
-      onCountrySelectRef.current?.(selectedLocation);
+      onCountrySelectRef.current?.({ name: countryName, latitude, longitude });
     }, ScreenSpaceEventType.LEFT_CLICK);
 
-    // Globe appearance.
+    const handleCanvasLeave = () => clearHoveredCountry();
+    viewer.scene.canvas.addEventListener("mouseleave", handleCanvasLeave);
+
     viewer.scene.globe.enableLighting = true;
     viewer.scene.globe.showGroundAtmosphere = true;
     viewer.scene.skyAtmosphere.show = true;
     viewer.scene.skyAtmosphere.brightnessShift = 0.08;
     viewer.scene.skyAtmosphere.saturationShift = -0.15;
 
-    // Initial camera position.
     viewer.camera.setView({
       destination: Cartesian3.fromDegrees(0, 15, 22000000),
     });
 
-    // Clean up Cesium resources when React unmounts this component.
     return () => {
       cancelled = true;
       clearHoveredCountry();
+      viewer.scene.canvas.removeEventListener("mouseleave", handleCanvasLeave);
 
-      if (!handler.isDestroyed()) {
-        handler.destroy();
-      }
+      if (!handler.isDestroyed()) handler.destroy();
+      eventEntitiesRef.current = [];
+      viewerRef.current = null;
 
-      if (!viewer.isDestroyed()) {
-        viewer.destroy();
-      }
+      if (!viewer.isDestroyed()) viewer.destroy();
     };
   }, []);
+
+  // Rebuild the map's live-event point layer whenever the feeds refresh.
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    if (!viewer || viewer.isDestroyed()) return;
+
+    for (const entity of eventEntitiesRef.current) {
+      viewer.entities.remove(entity);
+    }
+    eventEntitiesRef.current = [];
+
+    const positionedEvents = (Array.isArray(liveEvents) ? liveEvents : [])
+      .filter(
+        (event) =>
+          Number.isFinite(event.latitude) &&
+          Number.isFinite(event.longitude) &&
+          event.latitude >= -90 &&
+          event.latitude <= 90 &&
+          event.longitude >= -180 &&
+          event.longitude <= 180
+      )
+      .slice(0, 350);
+
+    for (const event of positionedEvents) {
+  const color = getEventColor(event);
+
+  const glowSize = Number.isFinite(event.magnitude)
+    ? Math.max(22, Math.min(34, 22 + event.magnitude * 1.2))
+    : 26;
+
+  const entity = viewer.entities.add({
+    id: `live-event-${event.id}`,
+    name: `${event.source}: ${event.title}`,
+
+    position: Cartesian3.fromDegrees(
+      event.longitude,
+      event.latitude,
+      15000
+    ),
+
+    billboard: {
+      image: createGlowImage(color),
+      width: glowSize,
+      height: glowSize,
+      heightReference: HeightReference.NONE,
+    },
+
+    point: {
+      pixelSize: 3,
+      color: Color.fromCssColorString("#DCEAF2").withAlpha(0.65),
+outlineColor: color.withAlpha(0.35),
+outlineWidth: 1,
+    },
+  });
+
+  eventEntitiesRef.current.push(entity);
+}
+
+    viewer.scene.requestRender();
+  }, [liveEvents]);
 
   return <div ref={mapRef} className="cesium-map" />;
 }

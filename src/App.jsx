@@ -1,205 +1,267 @@
 import { useEffect, useState } from "react";
-
 import {
   Activity,
   Bot,
-  CloudSun,
   Droplets,
-  Flame,
   Globe2,
   Leaf,
-  Trees,
   Wind,
   TrendingUp,
-  Factory,
   Sun,
+  Thermometer,
+  Waves,
 } from "lucide-react";
 
 import CesiumGlobe from "./CesiumGlobe";
+import LiveEventsPanel from "./LiveEventsPanel";
+import {
+  fetchLiveEarthData,
+  fetchSelectedLocationData,
+} from "./liveEarthData";
 import "./App.css";
+import "./LiveLocationAlerts.css";
 
-const NASA_START_DATE = "20261101";
-const NASA_END_DATE = "20261103";
+const GLOBAL_EVENT_REFRESH_MS = 5 * 60 * 1000;
+const LOCATION_DATA_REFRESH_MS = 15 * 60 * 1000;
 
-const indicators = [
-  {
-    title: "Temperature",
-    description: "Daily air temperature",
-    parameter: "T2M",
-    unit: "°C",
-    icon: CloudSun,
-    color: "blue",
-  },
-  {
-    title: "Relative humidity",
-    description: "Near-surface relative humidity",
-    parameter: "RH2M",
-    unit: "%",
-    icon: Droplets,
-    color: "cyan",
-  },
-  {
-    title: "Precipitation",
-    description: "Daily corrected precipitation",
-    parameter: "PRECTOTCORR",
-    unit: "mm/day",
-    icon: Droplets,
-    color: "blue",
-  },
-  {
-    title: "Wind speed",
-    description: "Wind speed at 10 metres",
-    parameter: "WS10M",
-    unit: "m/s",
-    icon: Wind,
-    color: "green",
-  },
-  {
-    title: "Solar radiation",
-    description: "Daily solar energy at the surface",
-    parameter: "ALLSKY_SFC_SW_DWN",
-    unit: "kWh/m²/day",
-    icon: Sun,
-    color: "orange",
-  },
-];
+const EMPTY_LIVE_EVENTS = {
+  events: [],
+  sourceStatus: { eonet: "loading", usgs: "loading" },
+  sourceErrors: [],
+  fetchedAt: null,
+};
 
-const additionalIndicators = [
-  {
-    title: "Forest health",
-    description: "Forest cover and vegetation",
-    icon: Trees,
-    color: "green",
-  },
-  {
-    title: "Fire activity",
-    description: "Satellite-detected fire activity",
-    icon: Flame,
-    color: "orange",
-  },
-  {
-    title: "Air quality",
-    description: "Atmospheric pollution indicators",
-    icon: Wind,
-    color: "blue",
-  },
-  {
-    title: "Pollution",
-    description: "Environmental pollution indicators",
-    icon: Factory,
-    color: "orange",
-  },
-];
+function formatTimestamp(value) {
+  if (!value) return "Timestamp not supplied";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Timestamp unavailable";
+  return date.toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZoneName: "short",
+  });
+}
 
-function formatDate(date) {
-  if (!date || date.length !== 8) return "";
-
-  return `${date.slice(0, 4)}-${date.slice(4, 6)}-${date.slice(6, 8)}`;
+function formatReading(value, decimals = 1) {
+  return typeof value === "number" && Number.isFinite(value)
+    ? value.toFixed(decimals)
+    : "—";
 }
 
 function App() {
   const [selectedLocation, setSelectedLocation] = useState(null);
-  const [nasaData, setNasaData] = useState({
+  const [liveEventsData, setLiveEventsData] = useState(EMPTY_LIVE_EVENTS);
+  const [liveEventsLoading, setLiveEventsLoading] = useState(true);
+  const [locationData, setLocationData] = useState({
     status: "idle",
-    date: null,
-    readings: {},
+    data: null,
     error: null,
   });
 
-  // Load NASA POWER readings whenever a new map location is selected.
+  // Retrieve global natural events and significant earthquakes.
+  useEffect(() => {
+    let active = true;
+    let currentController = null;
+
+    async function loadGlobalEvents() {
+      currentController?.abort();
+      currentController = new AbortController();
+      setLiveEventsLoading(true);
+
+      try {
+        const result = await fetchLiveEarthData(currentController.signal);
+        if (active) setLiveEventsData(result);
+      } catch (error) {
+        if (active && error.name !== "AbortError") {
+          setLiveEventsData((previous) => ({
+            ...previous,
+            sourceErrors: [error.message || "Unable to load global event feeds."],
+            fetchedAt: new Date().toISOString(),
+          }));
+        }
+      } finally {
+        if (active) setLiveEventsLoading(false);
+      }
+    }
+
+    loadGlobalEvents();
+    const intervalId = window.setInterval(
+      loadGlobalEvents,
+      GLOBAL_EVENT_REFRESH_MS
+    );
+
+    return () => {
+      active = false;
+      window.clearInterval(intervalId);
+      currentController?.abort();
+    };
+  }, []);
+
+  // Load current model-based weather and air-quality estimates at the map point.
   useEffect(() => {
     if (
       !selectedLocation ||
       typeof selectedLocation.latitude !== "number" ||
       typeof selectedLocation.longitude !== "number"
     ) {
+      setLocationData({ status: "idle", data: null, error: null });
       return undefined;
     }
 
-    const controller = new AbortController();
+    let active = true;
+    let currentController = null;
 
-    async function loadNasaData() {
-      setNasaData({
+    async function loadLocationData() {
+      currentController?.abort();
+      currentController = new AbortController();
+      setLocationData((previous) => ({
         status: "loading",
-        date: null,
-        readings: {},
+        data: previous.data,
         error: null,
-      });
+      }));
 
       try {
-        const params = new URLSearchParams({
-          parameters: "T2M,RH2M,PRECTOTCORR,WS10M,ALLSKY_SFC_SW_DWN",
-          community: "RE",
-          longitude: selectedLocation.longitude.toFixed(4),
-          latitude: selectedLocation.latitude.toFixed(4),
-          start: NASA_START_DATE,
-          end: NASA_END_DATE,
-          format: "JSON",
-          "time-standard": "UTC",
+        const result = await fetchSelectedLocationData({
+          latitude: selectedLocation.latitude,
+          longitude: selectedLocation.longitude,
+          signal: currentController.signal,
         });
 
-        const url = `https://power.larc.nasa.gov/api/temporal/daily/point?${params.toString()}`;
+        if (active) {
+          const weatherAvailable = Boolean(result.weather);
+          const airAvailable = Boolean(result.airQuality);
+          const status =
+            weatherAvailable && airAvailable
+              ? "loaded"
+              : weatherAvailable || airAvailable
+                ? "partial"
+                : "error";
 
-        const response = await fetch(url, {
-          signal: controller.signal,
-        });
-
-        if (!response.ok) {
-          throw new Error(`NASA POWER returned HTTP ${response.status}`);
+          setLocationData({ status, data: result, error: null });
         }
-
-        const data = await response.json();
-        const parameters = data.properties?.parameter || {};
-        const dates = Object.keys(parameters.T2M || {})
-          .filter((date) => /^\d{8}$/.test(date))
-          .sort();
-
-        if (!dates.length) {
-          throw new Error(
-            data.messages?.join(" ") || "NASA POWER did not return temperature data."
-          );
-        }
-
-        const latestDate = dates[dates.length - 1];
-        const readings = {};
-
-        for (const indicator of indicators) {
-          const value = parameters[indicator.parameter]?.[latestDate];
-
-          readings[indicator.parameter] =
-            typeof value === "number" && Number.isFinite(value) && value > -900
-              ? value
-              : null;
-        }
-
-        setNasaData({
-          status: "loaded",
-          date: latestDate,
-          readings,
-          error: null,
-        });
       } catch (error) {
-        if (error.name !== "AbortError") {
-          console.error("NASA POWER error:", error);
-          setNasaData({
+        if (active && error.name !== "AbortError") {
+          setLocationData({
             status: "error",
-            date: null,
-            readings: {},
-            error: error.message || "An unknown error occurred.",
+            data: null,
+            error: error.message || "Unable to load selected-location data.",
           });
         }
       }
     }
 
-    loadNasaData();
+    loadLocationData();
+    const intervalId = window.setInterval(
+      loadLocationData,
+      LOCATION_DATA_REFRESH_MS
+    );
 
-    return () => controller.abort();
+    return () => {
+      active = false;
+      window.clearInterval(intervalId);
+      currentController?.abort();
+    };
   }, [selectedLocation]);
 
   function handleCountrySelect(location) {
     console.log("Selected map location:", location);
     setSelectedLocation(location);
   }
+
+  const currentWeather = locationData.data?.weather?.current;
+  const weatherUnits = locationData.data?.weather?.current_units || {};
+  const currentAir = locationData.data?.airQuality?.current;
+  const airUnits = locationData.data?.airQuality?.current_units || {};
+  const selectedAlerts = locationData.data?.alerts || [];
+  const sourceStatus = locationData.data?.sourceStatus || {};
+
+  const conditionCards = [
+    {
+      title: "Temperature",
+      description: "Air temperature at 2 metres",
+      value: formatReading(currentWeather?.temperature_2m),
+      unit: weatherUnits.temperature_2m || "°C",
+      icon: Thermometer,
+      color: "blue",
+      source: currentWeather?.time
+        ? `Open-Meteo model · ${formatTimestamp(currentWeather.time)}`
+        : "Awaiting weather model",
+    },
+    {
+      title: "Relative humidity",
+      description: "Near-surface humidity",
+      value: formatReading(currentWeather?.relative_humidity_2m, 0),
+      unit: weatherUnits.relative_humidity_2m || "%",
+      icon: Droplets,
+      color: "cyan",
+      source: currentWeather?.time
+        ? `Open-Meteo model · ${formatTimestamp(currentWeather.time)}`
+        : "Awaiting weather model",
+    },
+    {
+      title: "Precipitation",
+      description: "Current model precipitation value",
+      value: formatReading(currentWeather?.precipitation),
+      unit: weatherUnits.precipitation || "mm",
+      icon: Waves,
+      color: "blue",
+      source: currentWeather?.time
+        ? `Open-Meteo model · ${formatTimestamp(currentWeather.time)}`
+        : "Awaiting weather model",
+    },
+    {
+      title: "Wind speed",
+      description: "Wind speed at 10 metres",
+      value: formatReading(currentWeather?.wind_speed_10m),
+      unit: weatherUnits.wind_speed_10m || "km/h",
+      icon: Wind,
+      color: "green",
+      source: currentWeather?.time
+        ? `Open-Meteo model · ${formatTimestamp(currentWeather.time)}`
+        : "Awaiting weather model",
+    },
+    {
+      title: "US Air Quality Index",
+      description: "Modelled air-quality index",
+      value: formatReading(currentAir?.us_aqi, 0),
+      unit: "AQI",
+      icon: Wind,
+      color: "orange",
+      source: currentAir?.time
+        ? `CAMS via Open-Meteo · ${formatTimestamp(currentAir.time)}`
+        : "Awaiting air-quality model",
+    },
+    {
+      title: "PM2.5",
+      description: "Fine particulate matter concentration",
+      value: formatReading(currentAir?.pm2_5),
+      unit: airUnits.pm2_5 || "μg/m³",
+      icon: Sun,
+      color: "cyan",
+      source: currentAir?.time
+        ? `CAMS via Open-Meteo · ${formatTimestamp(currentAir.time)}`
+        : "Awaiting air-quality model",
+    },
+  ];
+
+  const conditionStatusLabel =
+    locationData.status === "loaded"
+      ? "CURRENT MODEL DATA"
+      : locationData.status === "partial"
+        ? "PARTIAL DATA"
+        : locationData.status === "loading"
+          ? "UPDATING DATA"
+          : locationData.status === "error"
+            ? "DATA UNAVAILABLE"
+            : "SELECT A LOCATION";
+
+  const mappedEventCount = liveEventsData.events.filter(
+    (event) =>
+      Number.isFinite(event.latitude) && Number.isFinite(event.longitude)
+  ).length;
 
   return (
     <div className="app">
@@ -217,12 +279,13 @@ function App() {
         <nav className="navigation">
           <a className="active" href="#overview">Overview</a>
           <a href="#indicators">Indicators</a>
+          <a href="#events">Live events</a>
           <a href="#summary">Earth Summary</a>
         </nav>
 
         <div className="topbar-status">
           <span className="status-dot" />
-          Earth monitoring
+          Live data feeds
         </div>
       </header>
 
@@ -231,8 +294,8 @@ function App() {
           <p className="eyebrow">OUR PLANET. ONE VIEW.</p>
           <h1>Explore the health of <span>Earth.</span></h1>
           <p className="intro-description">
-            Explore our changing planet through satellite imagery,
-            environmental indicators, and scientific insights.
+            Explore current environmental conditions and reported Earth events
+            through scientific data feeds and satellite imagery.
           </p>
         </section>
 
@@ -249,9 +312,12 @@ function App() {
           </div>
 
           <div className="map-frame">
-            <CesiumGlobe onCountrySelect={handleCountrySelect} />
+            <CesiumGlobe
+              onCountrySelect={handleCountrySelect}
+              liveEvents={liveEventsData.events}
+            />
             <div className="map-caption">
-              <span>Satellite imagery basemap</span>
+              <span>Esri satellite imagery · {mappedEventCount} event locations</span>
               <span>Drag to rotate · Scroll to zoom</span>
             </div>
           </div>
@@ -269,88 +335,29 @@ function App() {
         <section className="indicators-section" id="indicators">
           <div className="section-heading">
             <div>
-              <p className="eyebrow">NASA POWER DATA</p>
+              <p className="eyebrow">CURRENT CONDITIONS · OPEN-METEO</p>
               <h2>Environmental readings</h2>
             </div>
-
-            <span className="data-status">
-              {nasaData.status === "loaded"
-                ? "NASA DATA CONNECTED"
-                : nasaData.status === "loading"
-                  ? "LOADING NASA DATA"
-                  : nasaData.status === "error"
-                    ? "DATA UNAVAILABLE"
-                    : "SELECT A LOCATION"}
-            </span>
+            <span className="data-status">{conditionStatusLabel}</span>
           </div>
 
-          {nasaData.status === "idle" && (
+          {!selectedLocation && (
             <p className="intro-description">
-              Select a location on the Earth map to load NASA POWER
-              environmental readings.
+              Select a point on the globe to load current model-based weather
+              and air-quality estimates for that location.
             </p>
           )}
 
-          {nasaData.status === "error" && (
+          {locationData.status === "error" && (
             <p className="indicator-note">
-              NASA data could not be loaded: {nasaData.error}
+              Current conditions could not be loaded: {locationData.error || "The data sources did not return a reading."}
             </p>
           )}
 
           <div className="indicator-grid">
-            {indicators.map((item) => {
+            {conditionCards.map((item) => {
               const Icon = item.icon;
-              const value = nasaData.readings[item.parameter];
-
-              return (
-                <article className="indicator-card" key={item.parameter}>
-                  <div className={`indicator-icon ${item.color}`}>
-                    <Icon size={23} />
-                  </div>
-
-                  <h3>{item.title}</h3>
-                  <p>{item.description}</p>
-
-                  <div className="indicator-value">
-                    {nasaData.status === "loaded" && typeof value === "number"
-                      ? `${value.toFixed(1)} ${item.unit}`
-                      : "—"}
-                  </div>
-
-                  <span className="indicator-note">
-                    {nasaData.status === "loading"
-                      ? "Requesting NASA data..."
-                      : nasaData.status === "loaded"
-                        ? value === null
-                          ? "No valid reading for this date"
-                          : `NASA POWER · ${formatDate(nasaData.date)}`
-                        : "Awaiting location"}
-                  </span>
-                </article>
-              );
-            })}
-          </div>
-
-          {nasaData.status === "loaded" && (
-            <p className="indicator-note">
-              Source: NASA POWER Daily Point API. These are historical
-              meteorological and solar readings for the selected coordinates,
-              not country-wide averages or live conditions.
-            </p>
-          )}
-        </section>
-
-        <section className="indicators-section">
-          <div className="section-heading">
-            <div>
-              <p className="eyebrow">MORE ENVIRONMENTAL DATA</p>
-              <h2>Other planet indicators</h2>
-            </div>
-          </div>
-
-          <div className="indicator-grid">
-            {additionalIndicators.map((item) => {
-              const Icon = item.icon;
+              const hasValue = item.value !== "—";
 
               return (
                 <article className="indicator-card" key={item.title}>
@@ -359,13 +366,93 @@ function App() {
                   </div>
                   <h3>{item.title}</h3>
                   <p>{item.description}</p>
-                  <div className="indicator-value">—</div>
-                  <span className="indicator-note">Awaiting verified dataset</span>
+                  <div className="indicator-value">
+                    {hasValue ? `${item.value} ${item.unit}` : "—"}
+                  </div>
+                  <span className="indicator-note">
+                    {locationData.status === "loading" && !hasValue
+                      ? "Requesting current data..."
+                      : item.source}
+                  </span>
                 </article>
               );
             })}
           </div>
+
+          {locationData.data && (
+            <p className="indicator-note live-data-disclaimer">
+              Weather values are current model estimates from Open-Meteo, not
+              guaranteed direct station observations. Air-quality values are
+              model-based estimates from the CAMS system distributed through
+              Open-Meteo. The app checks again every 15 minutes; the underlying
+              models update on their own schedules.
+            </p>
+          )}
+
+          <div className="location-alerts">
+            <div className="location-alerts-heading">
+              <div>
+                <p className="eyebrow">UNITED STATES ONLY</p>
+                <h3>National Weather Service alerts</h3>
+              </div>
+              <span className="data-status">
+                {sourceStatus.nws === "connected"
+                  ? `${selectedAlerts.length} ACTIVE`
+                  : sourceStatus.nws === "not-covered"
+                    ? "NOT IN COVERAGE"
+                    : sourceStatus.nws === "unavailable"
+                      ? "UNAVAILABLE"
+                      : selectedLocation
+                        ? "CHECKING"
+                        : "SELECT A LOCATION"}
+              </span>
+            </div>
+
+            {!selectedLocation ? (
+              <p className="indicator-note">Select a map location to check for active U.S. weather alerts.</p>
+            ) : sourceStatus.nws === "not-covered" ? (
+              <p className="indicator-note">The National Weather Service point-alert feed is currently queried for the contiguous United States only.</p>
+            ) : sourceStatus.nws === "connected" && selectedAlerts.length === 0 ? (
+              <p className="indicator-note">No active NWS alerts were returned for this point. This is not a guarantee that no local hazards exist.</p>
+            ) : sourceStatus.nws === "connected" ? (
+              <div className="location-alert-list">
+                {selectedAlerts.slice(0, 4).map((alert) => (
+                  <article className="location-alert-item" key={alert.id}>
+                    <div>
+                      <strong>{alert.headline}</strong>
+                      <p>{alert.event} · Severity: {alert.severity}</p>
+                      <span>Effective: {formatTimestamp(alert.effective)} · Expires: {formatTimestamp(alert.expires)}</span>
+                    </div>
+                    <a href={alert.url} target="_blank" rel="noreferrer">NWS source ↗</a>
+                  </article>
+                ))}
+              </div>
+            ) : sourceStatus.nws === "unavailable" ? (
+              <p className="indicator-note">The NWS alert service could not be reached for this point.</p>
+            ) : (
+              <p className="indicator-note">Checking the active-alert feed…</p>
+            )}
+          </div>
+
+          {locationData.data?.errors?.length > 0 && (
+            <p className="indicator-note">
+              Some sources were unavailable: {locationData.data.errors.join(" · ")}
+            </p>
+          )}
+
+          <div className="live-attribution">
+            <span>Weather: <a href="https://open-meteo.com/en/docs" target="_blank" rel="noreferrer">Open-Meteo ↗</a></span>
+            <span>Air quality: <a href="https://open-meteo.com/en/docs/air-quality-api" target="_blank" rel="noreferrer">CAMS via Open-Meteo ↗</a></span>
+            <span>Alerts: <a href="https://www.weather.gov/documentation/services-web-api" target="_blank" rel="noreferrer">NOAA / NWS ↗</a></span>
+          </div>
         </section>
+
+        <div id="events">
+          <LiveEventsPanel
+            data={liveEventsData}
+            loading={liveEventsLoading}
+          />
+        </div>
 
         <section className="summary-section" id="summary">
           <div className="summary-icon">
@@ -375,26 +462,26 @@ function App() {
           <div className="summary-content">
             <p className="eyebrow">PLANETARY OVERVIEW</p>
             <h2>Earth Health Summary</h2>
-
             <p>
-              Your planetary overview will appear here once verified
-              environmental datasets are connected. Earth Doctor will
-              summarize important changes, highlight areas of concern,
-              and explain possible environmental pressures using
-              evidence-based information.
+              Live event locations are currently supplied by NASA EONET and
+              USGS. Selecting a point loads model-based weather and air-quality
+              estimates, plus U.S. National Weather Service alerts where
+              available. Evidence-based environmental scoring and AI
+              interpretation will be added only after their underlying data
+              and methodology are connected.
             </p>
 
             <div className="summary-footer">
-              <span><Leaf size={15} /> Evidence-based insights</span>
-              <span><TrendingUp size={15} /> Historical comparisons</span>
-              <span><Bot size={15} /> AI-assisted explanations</span>
+              <span><Leaf size={15} /> Source-linked information</span>
+              <span><TrendingUp size={15} /> Historical comparisons next</span>
+              <span><Bot size={15} /> AI-assisted explanations next</span>
             </div>
           </div>
         </section>
 
         <footer className="footer">
           <span>EARTH DOCTOR AI</span>
-          <span>Built to better understand our planet.</span>
+          <span>Weather and air-quality estimates are model-based. Event times are source-reported.</span>
         </footer>
       </main>
     </div>

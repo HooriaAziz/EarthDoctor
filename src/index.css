@@ -1,15 +1,31 @@
 
-* {
-  box-sizing: border-box;
-}
+/* Earth Doctor AI — Starry background */
 
 html,
 body,
 #root {
   min-height: 100%;
-  margin: 0;
+  background-color: #030509;
 }
 
-button {
-  font: inherit;
+body {
+  margin: 0;
+  background-image:
+    radial-gradient(1px 1px at 20px 30px, #ffffff 99%, transparent),
+    radial-gradient(1px 1px at 100px 80px, #8ecbff 99%, transparent),
+    radial-gradient(2px 2px at 180px 150px, #ffffff 99%, transparent),
+    radial-gradient(1px 1px at 250px 40px, #b9dcff 99%, transparent),
+    radial-gradient(1px 1px at 300px 220px, #ffffff 99%, transparent),
+    radial-gradient(2px 2px at 60px 250px, #8ecbff 99%, transparent);
+
+  background-size: 350px 300px;
+  background-repeat: repeat;
+  background-color: #030509;
+  background-attachment: fixed;
+}
+
+/* Keep the dashboard above the background */
+#root {
+  position: relative;
+  z-index: 1;
 }
