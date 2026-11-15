@@ -27,6 +27,7 @@ function seededRandom(seed) {
   };
 }
 
+// Simplified Earth texture shared by both modes.
 function createEarthTexture() {
   const canvas = document.createElement("canvas");
   canvas.width = 1024;
@@ -87,6 +88,164 @@ function createEarthTexture() {
   return texture;
 }
 
+// Creates an illustrative false-color ozone texture.
+// This is a visual simulation, not NASA measurement data.
+function createOzoneTexture() {
+  const canvas = document.createElement("canvas");
+  canvas.width = 2048;
+  canvas.height = 1024;
+
+  const context = canvas.getContext("2d");
+
+  if (!context) {
+    throw new Error("Could not create ozone texture.");
+  }
+
+  context.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Broad color transitions across the globe.
+  const latitudeGradient = context.createLinearGradient(
+    0,
+    0,
+    0,
+    canvas.height
+  );
+
+  latitudeGradient.addColorStop(
+    0.0,
+    "rgba(220, 91, 53, 0.68)"
+  );
+
+  latitudeGradient.addColorStop(
+    0.13,
+    "rgba(231, 174, 55, 0.60)"
+  );
+
+  latitudeGradient.addColorStop(
+    0.27,
+    "rgba(91, 183, 105, 0.49)"
+  );
+
+  latitudeGradient.addColorStop(
+    0.42,
+    "rgba(38, 153, 203, 0.51)"
+  );
+
+  latitudeGradient.addColorStop(
+    0.57,
+    "rgba(38, 153, 203, 0.51)"
+  );
+
+  latitudeGradient.addColorStop(
+    0.73,
+    "rgba(85, 183, 105, 0.50)"
+  );
+
+  latitudeGradient.addColorStop(
+    0.86,
+    "rgba(220, 174, 53, 0.57)"
+  );
+
+  latitudeGradient.addColorStop(
+    1.0,
+    "rgba(70, 42, 166, 0.76)"
+  );
+
+  context.fillStyle = latitudeGradient;
+  context.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Illustrative lower-color region near Antarctica.
+  const southernRegion = context.createRadialGradient(
+    1024,
+    965,
+    20,
+    1024,
+    965,
+    300
+  );
+
+  southernRegion.addColorStop(
+    0,
+    "rgba(48, 27, 155, 0.92)"
+  );
+
+  southernRegion.addColorStop(
+    0.45,
+    "rgba(66, 61, 196, 0.76)"
+  );
+
+  southernRegion.addColorStop(
+    0.76,
+    "rgba(39, 121, 207, 0.38)"
+  );
+
+  southernRegion.addColorStop(
+    1,
+    "rgba(39, 121, 207, 0)"
+  );
+
+  context.fillStyle = southernRegion;
+  context.fillRect(0, 650, canvas.width, 374);
+
+  // Soft color variations to avoid a perfectly uniform band.
+  const patches = [
+    {
+      x: 350,
+      y: 260,
+      radius: 250,
+      color: "rgba(234, 179, 57, 0.48)",
+    },
+    {
+      x: 1350,
+      y: 330,
+      radius: 290,
+      color: "rgba(72, 194, 119, 0.38)",
+    },
+    {
+      x: 1700,
+      y: 730,
+      radius: 260,
+      color: "rgba(231, 151, 54, 0.43)",
+    },
+    {
+      x: 540,
+      y: 790,
+      radius: 220,
+      color: "rgba(44, 112, 206, 0.35)",
+    },
+  ];
+
+  patches.forEach((patch) => {
+    const gradient = context.createRadialGradient(
+      patch.x,
+      patch.y,
+      5,
+      patch.x,
+      patch.y,
+      patch.radius
+    );
+
+    gradient.addColorStop(0, patch.color);
+    gradient.addColorStop(1, "rgba(0, 0, 0, 0)");
+
+    context.fillStyle = gradient;
+
+    context.fillRect(
+      patch.x - patch.radius,
+      patch.y - patch.radius,
+      patch.radius * 2,
+      patch.radius * 2
+    );
+  });
+
+  const texture = new THREE.CanvasTexture(canvas);
+
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.wrapS = THREE.RepeatWrapping;
+
+  return texture;
+}
+
 function createOrbitPoints(config) {
   const random = seededRandom(
     config.id === "LEO" ? 17 : config.id === "MEO" ? 41 : 83
@@ -96,20 +255,15 @@ function createOrbitPoints(config) {
 
   for (let i = 0; i < config.count; i++) {
     const angle = random() * Math.PI * 2;
-
-    const radius =
-      config.radius + (random() - 0.5) * 0.16;
-
-    const verticalSpread =
-      (random() - 0.5) * 0.55;
+    const radius = config.radius + (random() - 0.5) * 0.16;
+    const verticalSpread = (random() - 0.5) * 0.55;
 
     positions[i * 3] = Math.cos(angle) * radius;
 
     positions[i * 3 + 1] =
       Math.sin(angle) * radius * 0.34 + verticalSpread;
 
-    positions[i * 3 + 2] =
-      Math.sin(angle) * radius;
+    positions[i * 3 + 2] = Math.sin(angle) * radius;
   }
 
   const geometry = new THREE.BufferGeometry();
@@ -132,7 +286,11 @@ function createOrbitPoints(config) {
   return new THREE.Points(geometry, material);
 }
 
-export default function OrbitalDebrisSimulation() {
+export default function OrbitalDebrisSimulation({
+  mode = "debris",
+}) {
+  const isOzoneMode = mode === "ozone";
+
   const mountRef = useRef(null);
   const orbitObjectsRef = useRef({});
   const controlsRef = useRef(null);
@@ -194,9 +352,7 @@ export default function OrbitalDebrisSimulation() {
 
     controlsRef.current = controls;
 
-    scene.add(
-      new THREE.AmbientLight(0x9bc9ff, 1.2)
-    );
+    scene.add(new THREE.AmbientLight(0x9bc9ff, 1.2));
 
     const sunlight = new THREE.DirectionalLight(
       0xffffff,
@@ -206,6 +362,7 @@ export default function OrbitalDebrisSimulation() {
     sunlight.position.set(4, 3, 5);
     scene.add(sunlight);
 
+    // Shared Earth used by both modes.
     const earthGroup = new THREE.Group();
     scene.add(earthGroup);
 
@@ -220,6 +377,7 @@ export default function OrbitalDebrisSimulation() {
 
     earthGroup.add(earth);
 
+    // Standard atmospheric glow for the orbital debris view.
     const atmosphere = new THREE.Mesh(
       new THREE.SphereGeometry(1.055, 64, 64),
       new THREE.MeshBasicMaterial({
@@ -227,12 +385,49 @@ export default function OrbitalDebrisSimulation() {
         transparent: true,
         opacity: 0.12,
         side: THREE.BackSide,
+        depthWrite: false,
       })
     );
 
+    atmosphere.visible = !isOzoneMode;
     earthGroup.add(atmosphere);
 
+    // Colored ozone layer surrounding Earth.
+    const ozoneShell = new THREE.Mesh(
+      new THREE.SphereGeometry(1.12, 96, 96),
+      new THREE.MeshBasicMaterial({
+        map: createOzoneTexture(),
+        transparent: true,
+        opacity: 0.78,
+        side: THREE.DoubleSide,
+        depthWrite: false,
+        blending: THREE.NormalBlending,
+      })
+    );
+
+    ozoneShell.visible = isOzoneMode;
+    earthGroup.add(ozoneShell);
+
+    // Softer blue glow outside the colored ozone layer.
+    const ozoneGlow = new THREE.Mesh(
+      new THREE.SphereGeometry(1.22, 64, 64),
+      new THREE.MeshBasicMaterial({
+        color: 0x168bff,
+        transparent: true,
+        opacity: 0.16,
+        side: THREE.DoubleSide,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+      })
+    );
+
+    ozoneGlow.visible = isOzoneMode;
+    earthGroup.add(ozoneGlow);
+
+    // Orbital objects are only displayed in debris mode.
     const orbitGroup = new THREE.Group();
+
+    orbitGroup.visible = !isOzoneMode;
     scene.add(orbitGroup);
 
     orbitObjectsRef.current = {};
@@ -274,6 +469,7 @@ export default function OrbitalDebrisSimulation() {
       ];
     });
 
+    // Background stars shared by both views.
     const starRandom = seededRandom(2026);
     const starPositions = new Float32Array(900 * 3);
 
@@ -370,7 +566,10 @@ export default function OrbitalDebrisSimulation() {
             : [object.material];
 
           materials.forEach((material) => {
-            if (material.map) material.map.dispose();
+            if (material.map) {
+              material.map.dispose();
+            }
+
             material.dispose();
           });
         }
@@ -382,7 +581,7 @@ export default function OrbitalDebrisSimulation() {
         container.removeChild(renderer.domElement);
       }
     };
-  }, []);
+  }, [mode]);
 
   useEffect(() => {
     pausedRef.current = paused;
@@ -393,12 +592,12 @@ export default function OrbitalDebrisSimulation() {
       ([orbit, objects]) => {
         objects.forEach((object) => {
           object.visible =
-            activeOrbit === "all" ||
-            activeOrbit === orbit;
+            !isOzoneMode &&
+            (activeOrbit === "all" || activeOrbit === orbit);
         });
       }
     );
-  }, [activeOrbit]);
+  }, [activeOrbit, isOzoneMode]);
 
   function resetView() {
     if (cameraRef.current && controlsRef.current) {
@@ -418,14 +617,22 @@ export default function OrbitalDebrisSimulation() {
         <div>
           <p className="orbital-simulation-eyebrow">
             <span className="orbital-live-dot" />
-            ILLUSTRATIVE 3D MODEL
+
+            {isOzoneMode
+              ? "ILLUSTRATIVE ATMOSPHERIC MODEL"
+              : "ILLUSTRATIVE 3D MODEL"}
           </p>
 
-          <h2>Earth's orbital environment</h2>
+          <h2>
+            {isOzoneMode
+              ? "Earth's ozone layer"
+              : "Earth's orbital environment"}
+          </h2>
 
           <p>
-            Explore a visual model of the regions where
-            human-made objects and orbital debris are found.
+            {isOzoneMode
+              ? "Explore a simplified false-color representation of ozone surrounding Earth."
+              : "Explore a visual model of the regions where human-made objects and orbital debris are found."}
           </p>
         </div>
 
@@ -441,20 +648,22 @@ export default function OrbitalDebrisSimulation() {
       </div>
 
       <div className="orbital-simulation-toolbar">
-        <div className="orbital-filter-buttons">
-          {ORBIT_OPTIONS.map((option) => (
-            <button
-              key={option.id}
-              type="button"
-              className={
-                activeOrbit === option.id ? "active" : ""
-              }
-              onClick={() => setActiveOrbit(option.id)}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
+        {!isOzoneMode && (
+          <div className="orbital-filter-buttons">
+            {ORBIT_OPTIONS.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                className={
+                  activeOrbit === option.id ? "active" : ""
+                }
+                onClick={() => setActiveOrbit(option.id)}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        )}
 
         <button
           type="button"
@@ -472,7 +681,9 @@ export default function OrbitalDebrisSimulation() {
         />
 
         <div className="orbital-canvas-label">
-          EARTH · ORBITAL REGIONS
+          {isOzoneMode
+            ? "EARTH · OZONE LAYER SIMULATION"
+            : "EARTH · ORBITAL REGIONS"}
         </div>
 
         <div className="orbital-canvas-help">
@@ -480,51 +691,79 @@ export default function OrbitalDebrisSimulation() {
         </div>
       </div>
 
-      <div className="orbital-simulation-legend">
-        {ORBIT_CONFIG.map((orbit) => (
-          <div
-            className="orbital-legend-item"
-            key={orbit.id}
-          >
+      {isOzoneMode ? (
+        <div className="orbital-simulation-legend">
+          <div className="orbital-legend-item">
             <span
               className="orbital-legend-dot"
-              style={{
-                backgroundColor: `#${orbit.color
-                  .toString(16)
-                  .padStart(6, "0")}`,
-              }}
+              style={{ backgroundColor: "#4930aa" }}
             />
-
-            <strong>{orbit.id}</strong>
-
-            <span>
-              {orbit.id === "LEO"
-                ? "Low Earth Orbit"
-                : orbit.id === "MEO"
-                  ? "Medium Earth Orbit"
-                  : "Geostationary Orbit"}
-            </span>
+            <strong>Blue / purple</strong>
+            <span>Cool color zone</span>
           </div>
-        ))}
-      </div>
+
+          <div className="orbital-legend-item">
+            <span
+              className="orbital-legend-dot"
+              style={{ backgroundColor: "#42b98a" }}
+            />
+            <strong>Teal / green</strong>
+            <span>Transition zone</span>
+          </div>
+
+          <div className="orbital-legend-item">
+            <span
+              className="orbital-legend-dot"
+              style={{ backgroundColor: "#e2a638" }}
+            />
+            <strong>Yellow / orange</strong>
+            <span>Warm color zone</span>
+          </div>
+        </div>
+      ) : (
+        <div className="orbital-simulation-legend">
+          {ORBIT_CONFIG.map((orbit) => (
+            <div
+              className="orbital-legend-item"
+              key={orbit.id}
+            >
+              <span
+                className="orbital-legend-dot"
+                style={{
+                  backgroundColor: `#${orbit.color
+                    .toString(16)
+                    .padStart(6, "0")}`,
+                }}
+              />
+
+              <strong>{orbit.id}</strong>
+
+              <span>
+                {orbit.id === "LEO"
+                  ? "Low Earth Orbit"
+                  : orbit.id === "MEO"
+                    ? "Medium Earth Orbit"
+                    : "Geostationary Orbit"}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="orbital-simulation-disclaimer">
         <AlertTriangle size={19} />
 
         <div>
           <strong>
-            Simulation disclaimer — not actual debris positions
+            {isOzoneMode
+              ? "Illustrative ozone colors — not measured concentrations"
+              : "Simulation disclaimer — not actual debris positions"}
           </strong>
 
           <p>
-            This 3D visualization is an illustrative simulation.
-            The number, positions, sizes, spacing, distribution
-            and movement of the displayed objects are not accurate
-            representations of real orbital debris. Objects are
-            generated for visualization and are not live satellite
-            tracking data. Orbital regions are simplified and are
-            not shown to scale. Refer to the linked ESA statistics
-            for published orbital-environment estimates.
+            {isOzoneMode
+              ? "The colored atmospheric shell is a visual simulation. Its colors and regional patterns are artistic approximations, not actual NASA ozone measurements, Dobson Unit values, or real-time atmospheric conditions. Refer to the NASA observation maps below for measured ozone data."
+              : "This 3D visualization is an illustrative simulation. The number, positions, sizes, spacing, distribution and movement of the displayed objects are not accurate representations of real orbital debris. Objects are generated for visualization and are not live satellite tracking data. Orbital regions are simplified and are not shown to scale. Refer to the linked ESA statistics for published orbital-environment estimates."}
           </p>
         </div>
       </div>

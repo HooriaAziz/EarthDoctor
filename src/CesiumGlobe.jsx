@@ -38,8 +38,6 @@ const HOVER_COUNTRY_FILL =
   Color.fromCssColorString("#00D9FF").withAlpha(0.9);
 
 // Camera bounds for the contiguous United States.
-// This deliberately excludes Alaska and Hawaii so they do not
-// force the camera to zoom out and produce an awkward view.
 const UNITED_STATES_MAINLAND_BOUNDS = Rectangle.fromDegrees(
   -126,
   23,
@@ -241,18 +239,13 @@ export default function CesiumGlobe({
 
     if (viewer.isDestroyed()) return;
 
-    // Special camera treatment for the United States.
-    // Do not fly to every US polygon because Alaska and Hawaii
-    // can make the combined bounding area excessively large.
     if (isUnitedStatesTarget(target)) {
       viewer.camera.flyTo({
         destination: UNITED_STATES_MAINLAND_BOUNDS,
         duration: 2.2,
       });
 
-      console.log(
-        "Zooming to the contiguous United States."
-      );
+      console.log("Zooming to the contiguous United States.");
 
       return;
     }
@@ -295,10 +288,7 @@ export default function CesiumGlobe({
       duration: 1.8,
     });
 
-    console.log(
-      "Zooming to searched country:",
-      target.name
-    );
+    console.log("Zooming to searched country:", target.name);
   }
 
   useEffect(() => {
@@ -313,7 +303,11 @@ export default function CesiumGlobe({
     const countryEntityByName = new Map();
     const countryEntityById = new Map();
 
+    // IMPORTANT:
+    // Keep Cesium from rendering until the container
+    // has a real width and height.
     const viewer = new Viewer(mapRef.current, {
+      useDefaultRenderLoop: false,
       baseLayer: false,
       animation: false,
       timeline: false,
@@ -337,6 +331,8 @@ export default function CesiumGlobe({
     cameraController.maximumZoomDistance = 40000000;
     cameraController.maximumTiltAngle = Math.PI / 2;
 
+    // Observe the container so Cesium only renders
+    // when the map is visible and has valid dimensions.
     const mapResizeObserver = new ResizeObserver(() => {
       if (cancelled || viewer.isDestroyed()) return;
 
@@ -345,10 +341,14 @@ export default function CesiumGlobe({
 
       const rect = container.getBoundingClientRect();
 
-      if (rect.width <= 0 || rect.height <= 0) return;
+      // Stop rendering while the map is hidden.
+      if (rect.width <= 0 || rect.height <= 0) {
+        viewer.useDefaultRenderLoop = false;
+        return;
+      }
 
+      // Resize before restarting the render loop.
       viewer.resize();
-      viewer.forceResize();
 
       viewer.useDefaultRenderLoop = true;
       viewer.scene.requestRender();
@@ -438,7 +438,9 @@ export default function CesiumGlobe({
       previousHoverStates = [];
       hoveredCountryKey = null;
 
-      viewer.scene.canvas.style.cursor = "";
+      if (!viewer.isDestroyed()) {
+        viewer.scene.canvas.style.cursor = "";
+      }
     }
 
     function highlightCountry(entities, countryName) {
@@ -609,6 +611,8 @@ export default function CesiumGlobe({
         if (searchTargetRef.current) {
           zoomToSearchedCountry(searchTargetRef.current);
         }
+
+        viewer.scene.requestRender();
       } catch (error) {
         if (!cancelled) {
           console.error("Country shapes failed:", error);

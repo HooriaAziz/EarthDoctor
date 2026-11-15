@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import {
   Activity,
@@ -13,6 +12,7 @@ import {
   Waves,
   Search,
   X,
+  Satellite,
 } from "lucide-react";
 
 import CesiumGlobe from "./CesiumGlobe";
@@ -20,6 +20,7 @@ import LiveEventsPanel from "./LiveEventsPanel";
 import CountryEmissionsProfile from "./CountryEmissionsProfile";
 import OrbitalDebrisMonitor from "./OrbitalDebrisMonitor";
 import OrbitalDebrisSimulation from "./OrbitalDebrisSimulation";
+import OzoneLayerMonitor from "./OzoneLayerMonitor";
 
 import {
   fetchLiveEarthData,
@@ -28,6 +29,7 @@ import {
 
 import "./App.css";
 import "./LiveLocationAlerts.css";
+
 import {
   EDGAR_COUNTRIES,
   getEdgarCountryProfile,
@@ -83,6 +85,9 @@ function normalizeCountrySearch(value) {
 
 function App() {
   const [activeSection, setActiveSection] = useState("inside");
+
+  const [activeOutsideView, setActiveOutsideView] =
+    useState("atmosphere");
 
   const [selectedLocation, setSelectedLocation] = useState(null);
 
@@ -510,7 +515,7 @@ function App() {
             <Activity size={21} />
             <span>
               <strong>Around Earth</strong>
-              <small>Orbital debris and space environment</small>
+              <small>Atmosphere and orbital environment</small>
             </span>
           </button>
         </section>
@@ -586,22 +591,22 @@ function App() {
                       id="country-search-results"
                     >
                       {displayedCountryResults.length > 0 ? (
-  displayedCountryResults.map((country) => (
-    <button
-      type="button"
-      key={country.code}
-      onClick={() =>
-        handleCountrySearchSelect(country)
-      }
-    >
-      <span>{country.name}</span>
-    </button>
-  ))
-) : (
-  <div className="country-search-empty">
-    No matching country found.
-  </div>
-)}
+                        displayedCountryResults.map((country) => (
+                          <button
+                            type="button"
+                            key={country.code}
+                            onClick={() =>
+                              handleCountrySearchSelect(country)
+                            }
+                          >
+                            <span>{country.name}</span>
+                          </button>
+                        ))
+                      ) : (
+                        <div className="country-search-empty">
+                          No matching country found.
+                        </div>
+                      )}
                     </div>
                   )}
               </div>
@@ -938,32 +943,86 @@ function App() {
         {activeSection === "outside" && (
           <>
             <section className="intro">
-              <p className="eyebrow">THE ORBITAL ENVIRONMENT</p>
+              <p className="eyebrow">ATMOSPHERE & ORBIT</p>
 
               <h1>
                 What surrounds <span>Earth?</span>
               </h1>
 
               <p className="intro-description">
-                Explore human-made objects orbiting our planet,
-                including defunct satellites, rocket bodies and
-                fragments of orbital debris.
+                Explore Earth's ozone layer, monitor atmospheric
+                conditions, and investigate human-made objects
+                orbiting our planet.
               </p>
             </section>
 
             <section className="orbital-section-heading">
               <div>
-                <p className="eyebrow">SPACE ENVIRONMENT MONITORING</p>
-                <h2>Orbital debris</h2>
+                <p className="eyebrow">EARTH SYSTEM MONITORING</p>
+                <h2>Atmosphere &amp; Orbit</h2>
                 <p>
-                  Understand the growing population of human-made
-                  objects in Earth's orbital environment.
+                  Monitor Earth's atmospheric ozone and explore
+                  human-made objects in the orbital environment.
                 </p>
               </div>
             </section>
 
-            <OrbitalDebrisSimulation />
-            <OrbitalDebrisMonitor />
+            <div
+              className="outside-view-tabs"
+              role="tablist"
+              aria-label="Around Earth monitoring views"
+            >
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeOutsideView === "atmosphere"}
+                className={`outside-view-tab ${
+                  activeOutsideView === "atmosphere" ? "active" : ""
+                }`}
+                onClick={() => setActiveOutsideView("atmosphere")}
+              >
+                <Satellite size={16} />
+                Atmosphere
+              </button>
+
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeOutsideView === "orbit"}
+                className={`outside-view-tab ${
+                  activeOutsideView === "orbit" ? "active" : ""
+                }`}
+                onClick={() => setActiveOutsideView("orbit")}
+              >
+                <Globe2 size={16} />
+                Orbital environment
+              </button>
+            </div>
+
+            {activeOutsideView === "atmosphere" ? (
+              <>
+  <OrbitalDebrisSimulation mode="ozone" />
+  <OzoneLayerMonitor />
+</>
+            ) : (
+              <>
+                <section className="orbital-section-heading">
+                  <div>
+                    <p className="eyebrow">
+                      SPACE ENVIRONMENT MONITORING
+                    </p>
+                    <h2>Orbital debris</h2>
+                    <p>
+                      Understand the population of human-made objects
+                      orbiting our planet.
+                    </p>
+                  </div>
+                </section>
+
+                <OrbitalDebrisSimulation />
+                <OrbitalDebrisMonitor />
+              </>
+            )}
           </>
         )}
 
@@ -972,7 +1031,7 @@ function App() {
           <span>
             {activeSection === "inside"
               ? "Weather and air-quality estimates are model-based. Event times are source-reported."
-              : "Orbital visualization is illustrative. Statistics are based on the cited source snapshot."}
+              : "Ozone maps are NASA satellite imagery. Orbital visualization is illustrative; statistics are based on the cited source snapshot."}
           </span>
         </footer>
       </main>
