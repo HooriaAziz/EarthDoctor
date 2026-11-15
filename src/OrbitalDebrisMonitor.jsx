@@ -1,4 +1,3 @@
-
 import {
   Activity,
   AlertTriangle,
@@ -12,8 +11,11 @@ import {
   ORBITAL_DEBRIS_OVERVIEW,
   ORBITAL_REGIME_DATA,
   ORBITAL_OBJECT_TYPES,
-} from "./assets/orbitalDebrisData";
+  ORBITAL_DEBRIS_HISTORICAL_SERIES,
+  ORBITAL_DEBRIS_HISTORICAL_SOURCE,
+} from "./assets/OrbitalDebrisData.js";
 
+import TrendAnalysisPanel from "./TrendAnalysisPanel.jsx";
 import "./OrbitalDebrisMonitor.css";
 
 function formatNumber(value) {
@@ -35,14 +37,22 @@ function StatCard({ label, value, detail, icon: Icon }) {
 
 export default function OrbitalDebrisMonitor() {
   const overview = ORBITAL_DEBRIS_OVERVIEW;
-
   const maxRegimeCount = Math.max(
     ...ORBITAL_REGIME_DATA.map((item) => item.objects)
   );
 
-  const debrisTypes = ORBITAL_OBJECT_TYPES.filter(
-    (item) => ["PF", "PD", "RF", "RD", "PM", "RM"].includes(item.code)
+  const debrisTypes = ORBITAL_OBJECT_TYPES.filter((item) =>
+    ["PF", "PD", "RF", "RD", "PM", "RM"].includes(item.code)
   );
+
+  const debris1990 = ORBITAL_DEBRIS_HISTORICAL_SERIES.find(
+    (item) => item.year === 1990
+  );
+  const latestHistorical = ORBITAL_DEBRIS_HISTORICAL_SERIES.at(-1);
+  const since1990Percent =
+    debris1990 && debris1990.value !== 0
+      ? ((latestHistorical.value - debris1990.value) / debris1990.value) * 100
+      : null;
 
   return (
     <section className="orbital-debris-section">
@@ -69,21 +79,18 @@ export default function OrbitalDebrisMonitor() {
           detail="Objects maintained in space surveillance catalogues"
           icon={Satellite}
         />
-
         <StatCard
           label="Debris, 1–10 cm"
           value={formatNumber(overview.estimatedDebris1To10cm)}
           detail="Model-based estimate"
           icon={AlertTriangle}
         />
-
         <StatCard
           label="Debris, 1 mm–1 cm"
           value={formatNumber(overview.estimatedDebris1mmTo1cm)}
           detail="Model-based estimate"
           icon={Activity}
         />
-
         <StatCard
           label="Mass in orbit"
           value={`>${formatNumber(overview.totalMassLowerBoundTonnes)} t`}
@@ -102,6 +109,21 @@ export default function OrbitalDebrisMonitor() {
         </p>
       </div>
 
+      <TrendAnalysisPanel
+        title="Historical growth of catalogued debris"
+        description="Year-end count of objects classified as debris, reconstructed from CelesTrak SATCAT launch and decay dates (1957–2025). Payloads and rocket bodies are not included in this series."
+        points={ORBITAL_DEBRIS_HISTORICAL_SERIES}
+        units="objects"
+        valueDigits={0}
+        slopeDigits={1}
+        comparisonStartYear={1990}
+        comparisonLabel="Change since 1990"
+        interpretation={`The reconstructed debris-class count rose by ${formatNumber(latestHistorical.value - ORBITAL_DEBRIS_HISTORICAL_SERIES[0].value)} objects from 1957 to 2025. From the non-zero 1990 baseline (${formatNumber(debris1990?.value ?? 0)}), it changed by ${since1990Percent == null ? "an unavailable amount" : `${since1990Percent >= 0 ? "+" : ""}${since1990Percent.toFixed(1)}%`}. The annual record is a catalogue-based reconstruction, not a complete count of small untracked fragments.`}
+        sourceName={ORBITAL_DEBRIS_HISTORICAL_SOURCE.name}
+        sourceUrl={ORBITAL_DEBRIS_HISTORICAL_SOURCE.url}
+        sourceNote={`Data snapshot retrieved ${ORBITAL_DEBRIS_HISTORICAL_SOURCE.retrieved}. The 2026 year-end value is excluded because it is not a completed year in that snapshot. This historical reconstruction and the current ESA catalogue snapshot above use different sources and definitions.`}
+      />
+
       <div className="debris-content-grid">
         <article className="debris-panel">
           <div className="debris-panel-heading">
@@ -119,7 +141,6 @@ export default function OrbitalDebrisMonitor() {
                   <strong>{item.orbit}</strong>
                   <span>{item.label}</span>
                 </div>
-
                 <div className="debris-bar-track">
                   <div
                     className="debris-bar-fill"
@@ -128,7 +149,6 @@ export default function OrbitalDebrisMonitor() {
                     }}
                   />
                 </div>
-
                 <strong className="debris-bar-value">
                   {formatNumber(item.objects)}
                 </strong>
@@ -178,7 +198,6 @@ export default function OrbitalDebrisMonitor() {
             {ORBITAL_DEBRIS_SOURCE.lastUpdated}
           </p>
         </div>
-
         <a
           href={ORBITAL_DEBRIS_SOURCE.url}
           target="_blank"

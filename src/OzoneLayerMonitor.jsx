@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 
 import {
@@ -10,7 +9,10 @@ import {
   Satellite,
 } from "lucide-react";
 
+import { NASA_OZONE_ANNUAL_RECORDS, NASA_OZONE_ANNUAL_SOURCE } from "./assets/nasaOzoneAnnualData.js";
+import TrendAnalysisPanel from "./TrendAnalysisPanel.jsx";
 import "./OzoneLayerMonitor.css";
+import "./OzoneTrendAnalysis.css";
 
 const FALLBACK_OBSERVATION = {
   date: "2026-11-12",
@@ -48,10 +50,7 @@ function parseLatestObservation(fileText) {
     .split(/\r?\n/)
     .map((line) => {
       const columns = line.trim().split(/\s+/);
-
-      if (columns.length < 2) {
-        return null;
-      }
+      if (columns.length < 2) return null;
 
       const date = columns[0];
       const area = Number(columns[1]);
@@ -60,7 +59,6 @@ function parseLatestObservation(fileText) {
         !/^\d{4}-\d{2}-\d{2}$/.test(date) ||
         !Number.isFinite(area) ||
         area < 0 ||
-        area === -9999 ||
         date > today
       ) {
         return null;
@@ -71,7 +69,6 @@ function parseLatestObservation(fileText) {
     .filter(Boolean);
 
   validRecords.sort((a, b) => a.date.localeCompare(b.date));
-
   return validRecords.at(-1) || null;
 }
 
@@ -108,16 +105,8 @@ function getMapPageUrl(date, hemisphere) {
 
 function OzoneMapCard({ map, observationDate }) {
   const [imageFailed, setImageFailed] = useState(false);
-
-  const imageUrl = getMapImageUrl(
-    observationDate,
-    map.mapCode
-  );
-
-  const pageUrl = getMapPageUrl(
-    observationDate,
-    map.hemisphere
-  );
+  const imageUrl = getMapImageUrl(observationDate, map.mapCode);
+  const pageUrl = getMapPageUrl(observationDate, map.hemisphere);
 
   useEffect(() => {
     setImageFailed(false);
@@ -130,7 +119,6 @@ function OzoneMapCard({ map, observationDate }) {
           <span className="ozone-region">{map.region}</span>
           <h3>{map.title}</h3>
         </div>
-
         <Satellite size={21} aria-hidden="true" />
       </div>
 
@@ -159,9 +147,7 @@ function OzoneMapCard({ map, observationDate }) {
         )}
       </a>
 
-      <p className="ozone-map-description">
-        {map.description}
-      </p>
+      <p className="ozone-map-description">{map.description}</p>
 
       <a
         className="ozone-source-link"
@@ -169,22 +155,17 @@ function OzoneMapCard({ map, observationDate }) {
         target="_blank"
         rel="noopener noreferrer"
       >
-        Open NASA map
-        <ExternalLink size={14} />
+        Open NASA map <ExternalLink size={14} />
       </a>
     </article>
   );
 }
 
 export default function OzoneLayerMonitor() {
-  const [observation, setObservation] = useState(
-    FALLBACK_OBSERVATION
-  );
-
+  const [observation, setObservation] = useState(FALLBACK_OBSERVATION);
   const [dataStatus, setDataStatus] = useState(
-    "Showing the latest verified NASA observation"
+    "Showing the saved fallback observation"
   );
-
   const [isLoading, setIsLoading] = useState(false);
   const [refreshNumber, setRefreshNumber] = useState(0);
 
@@ -208,35 +189,27 @@ export default function OzoneLayerMonitor() {
 
         const fileText = await response.text();
         const latest = parseLatestObservation(fileText);
-
-        if (!latest) {
-          throw new Error("No valid observation found");
-        }
+        if (!latest) throw new Error("No valid observation found");
 
         if (active) {
           setObservation(latest);
           setDataStatus("NASA data feed successfully updated");
         }
       } catch (error) {
-        if (error.name === "AbortError") {
-          return;
-        }
+        if (error.name === "AbortError") return;
 
         if (active) {
           setObservation(FALLBACK_OBSERVATION);
           setDataStatus(
-            "Live refresh unavailable — showing the latest verified NASA observation"
+            "Live refresh unavailable — showing the saved fallback observation"
           );
         }
       } finally {
-        if (active) {
-          setIsLoading(false);
-        }
+        if (active) setIsLoading(false);
       }
     }
 
     loadNASAData();
-
     return () => {
       active = false;
       controller.abort();
@@ -244,24 +217,26 @@ export default function OzoneLayerMonitor() {
   }, [refreshNumber]);
 
   const formattedDate = formatDate(observation.date);
+  const ozoneAreaPoints = NASA_OZONE_ANNUAL_RECORDS.map((record) => ({
+    year: record.year,
+    value: record.maxDailyAreaMillionKm2,
+  }));
+  const minimumOzonePoints = NASA_OZONE_ANNUAL_RECORDS.map((record) => ({
+    year: record.year,
+    value: record.minimumOzoneDU,
+  }));
 
   return (
     <section className="ozone-monitor">
       <div className="ozone-monitor-header">
         <div>
-          <p className="eyebrow">
-            NASA ATMOSPHERIC MONITORING
-          </p>
-
+          <p className="eyebrow">NASA ATMOSPHERIC MONITORING</p>
           <h2>Ozone Layer Monitor</h2>
-
           <p className="ozone-intro">
-            Explore satellite-derived ozone observations
-            around Earth's atmosphere, including the Arctic
-            and Antarctic polar regions.
+            Explore satellite-derived ozone observations around Earth's
+            atmosphere, including the Arctic and Antarctic polar regions.
           </p>
         </div>
-
         <div className="ozone-nasa-label">
           <Satellite size={16} />
           NASA DATA
@@ -271,7 +246,6 @@ export default function OzoneLayerMonitor() {
       <div className="ozone-metrics">
         <article className="ozone-metric">
           <CalendarDays size={20} />
-
           <div>
             <span>Latest valid observation</span>
             <strong>{formattedDate}</strong>
@@ -280,18 +254,14 @@ export default function OzoneLayerMonitor() {
 
         <article className="ozone-metric">
           <Activity size={20} />
-
           <div>
             <span>Antarctic ozone-hole area</span>
-            <strong>
-              {observation.area.toFixed(2)} million km²
-            </strong>
+            <strong>{observation.area.toFixed(2)} million km²</strong>
           </div>
         </article>
 
         <article className="ozone-metric">
           <Info size={20} />
-
           <div>
             <span>Ozone-hole area threshold</span>
             <strong>220 Dobson Units (DU)</strong>
@@ -301,12 +271,7 @@ export default function OzoneLayerMonitor() {
 
       <div className="ozone-data-status" aria-live="polite">
         <div className="ozone-data-status-text">
-          <span
-            className={`ozone-status-dot ${
-              isLoading ? "checking" : ""
-            }`}
-          />
-
+          <span className={`ozone-status-dot ${isLoading ? "checking" : ""}`} />
           <span>{dataStatus}</span>
         </div>
 
@@ -320,23 +285,16 @@ export default function OzoneLayerMonitor() {
             size={14}
             className={isLoading ? "ozone-spinning" : ""}
           />
-
           {isLoading ? "Updating..." : "Refresh NASA data"}
         </button>
       </div>
 
       <div className="ozone-map-section-heading">
         <div>
-          <p className="eyebrow">
-            POLAR OZONE OBSERVATIONS
-          </p>
-
+          <p className="eyebrow">POLAR OZONE OBSERVATIONS</p>
           <h3>Explore both hemispheres</h3>
         </div>
-
-        <span className="ozone-observation-tag">
-          NASA SATELLITE MAPS
-        </span>
+        <span className="ozone-observation-tag">NASA SATELLITE MAPS</span>
       </div>
 
       <div className="ozone-map-grid">
@@ -354,90 +312,104 @@ export default function OzoneLayerMonitor() {
           <strong>Understanding the map colors</strong>
           <span>NASA Ozone Watch</span>
         </div>
-
         <div
           className="ozone-color-scale"
           role="img"
           aria-label="Qualitative color guide from lower ozone in purple and blue to higher ozone in yellow and red"
         />
-
         <div className="ozone-legend-labels">
           <span>Lower total ozone</span>
           <span>Higher total ozone</span>
         </div>
-
         <p className="ozone-legend-note">
-          This is a visual guide, not a numeric scale.
-          Refer to NASA's original map legend for exact
-          Dobson Unit values.
+          This is a visual guide, not a numeric scale. Refer to NASA's original
+          map legend for exact Dobson Unit values.
         </p>
       </div>
 
       <div className="ozone-global-viewer">
         <div>
-          <span className="ozone-region">
-            MORE NASA OBSERVATIONS
-          </span>
-
+          <span className="ozone-region">MORE NASA OBSERVATIONS</span>
           <strong>Explore global ozone measurements</strong>
-
           <p>
-            Open NASA's interactive viewer to explore
-            global ozone observations from multiple
-            satellite instruments.
+            Open NASA's interactive viewer to explore global ozone observations
+            from multiple satellite instruments.
           </p>
         </div>
-
         <a
           className="ozone-global-viewer-link"
           href="https://ozoneaq.gsfc.nasa.gov/map/"
           target="_blank"
           rel="noopener noreferrer"
         >
-          NASA global viewer
-          <ExternalLink size={14} />
+          NASA global viewer <ExternalLink size={14} />
         </a>
       </div>
 
+      <div className="ozone-trend-heading">
+        <p className="eyebrow">HISTORICAL SCIENTIFIC ANALYSIS</p>
+        <h3>How has Antarctic ozone changed?</h3>
+        <p>
+          The annual records below are separate from the latest daily reading
+          above. They let us compare the same annual measures across years.
+        </p>
+      </div>
+
+      <TrendAnalysisPanel
+        title="Maximum daily Antarctic ozone-hole area"
+        description="Largest daily area each year in which total-column ozone fell below 220 Dobson Units, south of 40°S."
+        points={ozoneAreaPoints}
+        units="million km²"
+        valueDigits={1}
+        slopeDigits={3}
+        interpretation="The 1979–2025 record shows the long-term expansion of the Antarctic ozone-hole area from the start of the satellite record. The 1979 starting value was small (1.1 million km²), so the percentage change is especially sensitive to that baseline. This overall trend does not mean the hole grew every year or that its area is currently increasing every year."
+        sourceName={NASA_OZONE_ANNUAL_SOURCE.name}
+        sourceUrl={NASA_OZONE_ANNUAL_SOURCE.url}
+        sourceNote={`NASA's annual maximum-daily records run from 1979 through 2025. NASA reports no data for 1995; that year is left out rather than interpolated. Source last updated ${NASA_OZONE_ANNUAL_SOURCE.lastUpdated}.`}
+      />
+
+      <TrendAnalysisPanel
+        title="Minimum daily Southern Hemisphere ozone"
+        description="Lowest daily Southern Hemisphere total-column ozone value each year, measured in Dobson Units (DU)."
+        points={minimumOzonePoints}
+        units="DU"
+        valueDigits={1}
+        slopeDigits={3}
+        interpretation="A downward trend in the annual minimum indicates lower minimum ozone values across this historical record. It is a regional extreme, not a statement that ozone has decreased uniformly over the entire planet."
+        sourceName={NASA_OZONE_ANNUAL_SOURCE.name}
+        sourceUrl={NASA_OZONE_ANNUAL_SOURCE.url}
+        sourceNote="The 1995 observation is missing in NASA's published annual record and is not estimated here."
+      />
+
       <div className="ozone-science-note">
         <Info size={19} />
-
         <p>
-          These maps show <strong>total-column ozone</strong>:
-          the amount of ozone integrated through a vertical
-          column of atmosphere. The Antarctic ozone-hole area
-          is a separate measurement, calculated using the
-          area enclosed by the 220 DU contour. It is not a
-          measurement of global ozone concentration or
-          ground-level ozone.
-
-          The 3D ozone shell in this project is illustrative,
-          not a live measurement of ozone thickness or
-          concentration.
+          These maps show <strong>total-column ozone</strong>: the amount of
+          ozone integrated through a vertical column of atmosphere. The
+          Antarctic ozone-hole area is a separate measurement, calculated
+          using the area enclosed by the 220 DU contour. It is not a
+          measurement of global ozone concentration or ground-level ozone.
+          The 3D ozone shell in this project is illustrative, not a live
+          measurement of ozone thickness or concentration.
         </p>
       </div>
 
       <div className="ozone-attribution">
         Data and imagery:{" "}
-
         <a
           href="https://ozonewatch.gsfc.nasa.gov/"
           target="_blank"
           rel="noopener noreferrer"
         >
-          NASA Ozone Watch
-          <ExternalLink size={13} />
+          NASA Ozone Watch <ExternalLink size={13} />
         </a>
-
         {" · "}
-
         <a
           href={NASA_DATA_URL}
           target="_blank"
           rel="noopener noreferrer"
         >
-          NASA daily area data
-          <ExternalLink size={13} />
+          NASA daily area data <ExternalLink size={13} />
         </a>
       </div>
     </section>
