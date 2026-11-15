@@ -1,4 +1,6 @@
 
+import { useEffect, useState } from "react";
+
 import {
   Activity,
   Bot,
@@ -10,6 +12,8 @@ import {
   Trees,
   Wind,
   TrendingUp,
+  Factory,
+  Sun,
 } from "lucide-react";
 
 import CesiumGlobe from "./CesiumGlobe";
@@ -17,32 +21,168 @@ import "./App.css";
 
 const indicators = [
   {
-    title: "Forest health",
-    description: "Forest cover and vegetation",
-    icon: Trees,
-    color: "green",
-  },
-  {
-    title: "Air quality",
-    description: "Atmospheric conditions",
-    icon: Wind,
+    title: "Temperature",
+    description: "Daily air temperature",
+    parameter: "T2M",
+    unit: "°C",
+    icon: CloudSun,
     color: "blue",
   },
   {
-    title: "Water health",
-    description: "Water and ocean indicators",
+    title: "Relative humidity",
+    description: "Near-surface relative humidity",
+    parameter: "RH2M",
+    unit: "%",
     icon: Droplets,
     color: "cyan",
   },
   {
-    title: "Fire activity",
-    description: "Detected fire activity",
-    icon: Flame,
+    title: "Precipitation",
+    description: "Daily corrected precipitation",
+    parameter: "PRECTOTCORR",
+    unit: "mm/day",
+    icon: Droplets,
+    color: "blue",
+  },
+  {
+    title: "Wind speed",
+    description: "Wind speed at 10 metres",
+    parameter: "WS10M",
+    unit: "m/s",
+    icon: Wind,
+    color: "green",
+  },
+  {
+    title: "Solar radiation",
+    description: "Daily solar energy at the surface",
+    parameter: "ALLSKY_SFC_SW_DWN",
+    unit: "kWh/m²/day",
+    icon: Sun,
     color: "orange",
   },
 ];
 
 function App() {
+  const [selectedLocation, setSelectedLocation] = useState(null);
+
+  const [nasaData, setNasaData] = useState({
+    status: "idle",
+    date: null,
+    readings: {},
+    error: null,
+  });
+
+  // Load NASA POWER data whenever a map location is selected
+  useEffect(() => {
+    if (
+      !selectedLocation ||
+      typeof selectedLocation.latitude !== "number" ||
+      typeof selectedLocation.longitude !== "number"
+    ) {
+      return;
+    }
+
+    const controller = new AbortController();
+
+    async function loadNasaData() {
+      setNasaData({
+        status: "loading",
+        date: null,
+        readings: {},
+        error: null,
+      });
+
+      try {
+        const params = new URLSearchParams({
+          parameters:
+            "T2M,RH2M,PRECTOTCORR,WS10M,ALLSKY_SFC_SW_DWN",
+          community: "RE",
+          longitude: selectedLocation.longitude.toFixed(4),
+          latitude: selectedLocation.latitude.toFixed(4),
+          start: "20261101",
+          end: "20261103",
+          format: "JSON",
+          "time-standard": "UTC",
+        });
+
+        const url =
+          `https://power.larc.nasa.gov/api/temporal/daily/point?${params}`;
+
+        const response = await fetch(url, {
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          throw new Error(
+            `NASA POWER returned HTTP ${response.status}`
+          );
+        }
+
+        const data = await response.json();
+
+        const parameters =
+          data.properties?.parameter || {};
+
+        const dates = Object.keys(
+          parameters.T2M || {}
+        ).sort();
+
+        if (!dates.length) {
+          throw new Error("No temperature data was returned.");
+        }
+
+        const latestDate = dates[dates.length - 1];
+
+        const readings = {};
+
+        for (const indicator of indicators) {
+          const value =
+            parameters[indicator.parameter]?.[latestDate];
+
+          readings[indicator.parameter] =
+            typeof value === "number" &&
+            Number.isFinite(value) &&
+            value > -900
+              ? value
+              : null;
+        }
+
+        setNasaData({
+          status: "loaded",
+          date: latestDate,
+          readings,
+          error: null,
+        });
+      } catch (error) {
+        if (error.name !== "AbortError") {
+          console.error("NASA POWER error:", error);
+
+          setNasaData({
+            status: "error",
+            date: null,
+            readings: {},
+            error: error.message,
+          });
+        }
+      }
+    }
+
+    loadNasaData();
+
+    return () => controller.abort();
+  }, [selectedLocation]);
+
+  function handleCountrySelect(location) {
+    console.log("Selected map location:", location);
+    setSelectedLocation(location);
+  }
+
+  function formatDate(date) {
+    if (!date) return "";
+
+    return `${date.slice(0, 4)}-${date.slice(4, 6)}-${date.slice(6, 8)}`;
+  }
+
   return (
     <div className="app">
       <header className="topbar">
@@ -91,29 +231,62 @@ function App() {
           </div>
 
           <div className="map-frame">
-            <CesiumGlobe />
+            <CesiumGlobe onCountrySelect={handleCountrySelect} />
+
             <div className="map-caption">
               <span>Satellite imagery basemap</span>
               <span>Drag to rotate · Scroll to zoom</span>
             </div>
           </div>
+
+          {selectedLocation && (
+            <p className="indicator-note">
+              Selected: {selectedLocation.name || "Map location"}
+              {typeof selectedLocation.latitude === "number" &&
+                typeof selectedLocation.longitude === "number" &&
+                ` · ${selectedLocation.latitude.toFixed(3)}°, ${selectedLocation.longitude.toFixed(3)}°`}
+            </p>
+          )}
         </section>
 
         <section className="indicators-section" id="indicators">
           <div className="section-heading">
             <div>
-              <p className="eyebrow">ENVIRONMENTAL DATA</p>
-              <h2>Planet indicators</h2>
+              <p className="eyebrow">NASA POWER DATA</p>
+              <h2>Environmental readings</h2>
             </div>
-            <span className="data-status">DATA CONNECTION PENDING</span>
+
+            <span className="data-status">
+              {nasaData.status === "loaded"
+                ? "NASA DATA CONNECTED"
+                : nasaData.status === "loading"
+                  ? "LOADING NASA DATA"
+                  : nasaData.status === "error"
+                    ? "DATA UNAVAILABLE"
+                    : "SELECT A LOCATION"}
+            </span>
           </div>
+
+          {nasaData.status === "idle" && (
+            <p className="intro-description">
+              Select a location on the Earth map to load NASA POWER
+              environmental readings.
+            </p>
+          )}
+
+          {nasaData.status === "error" && (
+            <p className="indicator-note">
+              NASA data could not be loaded: {nasaData.error}
+            </p>
+          )}
 
           <div className="indicator-grid">
             {indicators.map((item) => {
               const Icon = item.icon;
+              const value = nasaData.readings[item.parameter];
 
               return (
-                <article className="indicator-card" key={item.title}>
+                <article className="indicator-card" key={item.parameter}>
                   <div className={`indicator-icon ${item.color}`}>
                     <Icon size={23} />
                   </div>
@@ -121,9 +294,82 @@ function App() {
                   <h3>{item.title}</h3>
                   <p>{item.description}</p>
 
+                  <div className="indicator-value">
+                    {typeof value === "number"
+                      ? `${value.toFixed(1)} ${item.unit}`
+                      : "—"}
+                  </div>
+
+                  <span className="indicator-note">
+                    {nasaData.status === "loading"
+                      ? "Requesting NASA data..."
+                      : nasaData.status === "loaded"
+                        ? value === null
+                          ? "No valid reading for this date"
+                          : `NASA POWER · ${formatDate(nasaData.date)}`
+                        : "Awaiting location"}
+                  </span>
+                </article>
+              );
+            })}
+          </div>
+
+          {nasaData.status === "loaded" && (
+            <p className="indicator-note">
+              Source: NASA POWER Daily Point API. These are
+              meteorological and solar readings for the selected
+              coordinates, not country-wide averages.
+            </p>
+          )}
+        </section>
+
+        <section className="indicators-section">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">MORE ENVIRONMENTAL DATA</p>
+              <h2>Other planet indicators</h2>
+            </div>
+          </div>
+
+          <div className="indicator-grid">
+            {[
+              {
+                title: "Forest health",
+                description: "Forest cover and vegetation",
+                icon: Trees,
+                color: "green",
+              },
+              {
+                title: "Fire activity",
+                description: "Satellite-detected fire activity",
+                icon: Flame,
+                color: "orange",
+              },
+              {
+                title: "Air quality",
+                description: "Atmospheric pollution indicators",
+                icon: Wind,
+                color: "blue",
+              },
+              {
+                title: "Pollution",
+                description: "Environmental pollution indicators",
+                icon: Factory,
+                color: "orange",
+              },
+            ].map((item) => {
+              const Icon = item.icon;
+
+              return (
+                <article className="indicator-card" key={item.title}>
+                  <div className={`indicator-icon ${item.color}`}>
+                    <Icon size={23} />
+                  </div>
+                  <h3>{item.title}</h3>
+                  <p>{item.description}</p>
                   <div className="indicator-value">—</div>
                   <span className="indicator-note">
-                    Awaiting verified data
+                    Awaiting verified dataset
                   </span>
                 </article>
               );
