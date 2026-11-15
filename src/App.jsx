@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 
 import {
@@ -18,6 +17,9 @@ import {
 
 import CesiumGlobe from "./CesiumGlobe";
 import "./App.css";
+
+const NASA_START_DATE = "20261101";
+const NASA_END_DATE = "20261103";
 
 const indicators = [
   {
@@ -62,9 +64,41 @@ const indicators = [
   },
 ];
 
+const additionalIndicators = [
+  {
+    title: "Forest health",
+    description: "Forest cover and vegetation",
+    icon: Trees,
+    color: "green",
+  },
+  {
+    title: "Fire activity",
+    description: "Satellite-detected fire activity",
+    icon: Flame,
+    color: "orange",
+  },
+  {
+    title: "Air quality",
+    description: "Atmospheric pollution indicators",
+    icon: Wind,
+    color: "blue",
+  },
+  {
+    title: "Pollution",
+    description: "Environmental pollution indicators",
+    icon: Factory,
+    color: "orange",
+  },
+];
+
+function formatDate(date) {
+  if (!date || date.length !== 8) return "";
+
+  return `${date.slice(0, 4)}-${date.slice(4, 6)}-${date.slice(6, 8)}`;
+}
+
 function App() {
   const [selectedLocation, setSelectedLocation] = useState(null);
-
   const [nasaData, setNasaData] = useState({
     status: "idle",
     date: null,
@@ -72,14 +106,14 @@ function App() {
     error: null,
   });
 
-  // Load NASA POWER data whenever a map location is selected
+  // Load NASA POWER readings whenever a new map location is selected.
   useEffect(() => {
     if (
       !selectedLocation ||
       typeof selectedLocation.latitude !== "number" ||
       typeof selectedLocation.longitude !== "number"
     ) {
-      return;
+      return undefined;
     }
 
     const controller = new AbortController();
@@ -94,55 +128,46 @@ function App() {
 
       try {
         const params = new URLSearchParams({
-          parameters:
-            "T2M,RH2M,PRECTOTCORR,WS10M,ALLSKY_SFC_SW_DWN",
+          parameters: "T2M,RH2M,PRECTOTCORR,WS10M,ALLSKY_SFC_SW_DWN",
           community: "RE",
           longitude: selectedLocation.longitude.toFixed(4),
           latitude: selectedLocation.latitude.toFixed(4),
-          start: "20261101",
-          end: "20261103",
+          start: NASA_START_DATE,
+          end: NASA_END_DATE,
           format: "JSON",
           "time-standard": "UTC",
         });
 
-        const url =
-          `https://power.larc.nasa.gov/api/temporal/daily/point?${params}`;
+        const url = `https://power.larc.nasa.gov/api/temporal/daily/point?${params.toString()}`;
 
         const response = await fetch(url, {
           signal: controller.signal,
         });
 
         if (!response.ok) {
-          throw new Error(
-            `NASA POWER returned HTTP ${response.status}`
-          );
+          throw new Error(`NASA POWER returned HTTP ${response.status}`);
         }
 
         const data = await response.json();
-
-        const parameters =
-          data.properties?.parameter || {};
-
-        const dates = Object.keys(
-          parameters.T2M || {}
-        ).sort();
+        const parameters = data.properties?.parameter || {};
+        const dates = Object.keys(parameters.T2M || {})
+          .filter((date) => /^\d{8}$/.test(date))
+          .sort();
 
         if (!dates.length) {
-          throw new Error("No temperature data was returned.");
+          throw new Error(
+            data.messages?.join(" ") || "NASA POWER did not return temperature data."
+          );
         }
 
         const latestDate = dates[dates.length - 1];
-
         const readings = {};
 
         for (const indicator of indicators) {
-          const value =
-            parameters[indicator.parameter]?.[latestDate];
+          const value = parameters[indicator.parameter]?.[latestDate];
 
           readings[indicator.parameter] =
-            typeof value === "number" &&
-            Number.isFinite(value) &&
-            value > -900
+            typeof value === "number" && Number.isFinite(value) && value > -900
               ? value
               : null;
         }
@@ -156,12 +181,11 @@ function App() {
       } catch (error) {
         if (error.name !== "AbortError") {
           console.error("NASA POWER error:", error);
-
           setNasaData({
             status: "error",
             date: null,
             readings: {},
-            error: error.message,
+            error: error.message || "An unknown error occurred.",
           });
         }
       }
@@ -175,12 +199,6 @@ function App() {
   function handleCountrySelect(location) {
     console.log("Selected map location:", location);
     setSelectedLocation(location);
-  }
-
-  function formatDate(date) {
-    if (!date) return "";
-
-    return `${date.slice(0, 4)}-${date.slice(4, 6)}-${date.slice(6, 8)}`;
   }
 
   return (
@@ -232,7 +250,6 @@ function App() {
 
           <div className="map-frame">
             <CesiumGlobe onCountrySelect={handleCountrySelect} />
-
             <div className="map-caption">
               <span>Satellite imagery basemap</span>
               <span>Drag to rotate · Scroll to zoom</span>
@@ -295,7 +312,7 @@ function App() {
                   <p>{item.description}</p>
 
                   <div className="indicator-value">
-                    {typeof value === "number"
+                    {nasaData.status === "loaded" && typeof value === "number"
                       ? `${value.toFixed(1)} ${item.unit}`
                       : "—"}
                   </div>
@@ -316,9 +333,9 @@ function App() {
 
           {nasaData.status === "loaded" && (
             <p className="indicator-note">
-              Source: NASA POWER Daily Point API. These are
-              meteorological and solar readings for the selected
-              coordinates, not country-wide averages.
+              Source: NASA POWER Daily Point API. These are historical
+              meteorological and solar readings for the selected coordinates,
+              not country-wide averages or live conditions.
             </p>
           )}
         </section>
@@ -332,32 +349,7 @@ function App() {
           </div>
 
           <div className="indicator-grid">
-            {[
-              {
-                title: "Forest health",
-                description: "Forest cover and vegetation",
-                icon: Trees,
-                color: "green",
-              },
-              {
-                title: "Fire activity",
-                description: "Satellite-detected fire activity",
-                icon: Flame,
-                color: "orange",
-              },
-              {
-                title: "Air quality",
-                description: "Atmospheric pollution indicators",
-                icon: Wind,
-                color: "blue",
-              },
-              {
-                title: "Pollution",
-                description: "Environmental pollution indicators",
-                icon: Factory,
-                color: "orange",
-              },
-            ].map((item) => {
+            {additionalIndicators.map((item) => {
               const Icon = item.icon;
 
               return (
@@ -368,9 +360,7 @@ function App() {
                   <h3>{item.title}</h3>
                   <p>{item.description}</p>
                   <div className="indicator-value">—</div>
-                  <span className="indicator-note">
-                    Awaiting verified dataset
-                  </span>
+                  <span className="indicator-note">Awaiting verified dataset</span>
                 </article>
               );
             })}
