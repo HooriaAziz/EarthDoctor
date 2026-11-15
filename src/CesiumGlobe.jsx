@@ -13,6 +13,7 @@ import {
   ScreenSpaceEventHandler,
   ScreenSpaceEventType,
   HeightReference,
+  ArcType,
 } from "cesium";
 
 const COUNTRY_NAME_KEYS = [
@@ -55,6 +56,39 @@ function normalizeCountryName(name) {
     .trim()
     .toLowerCase()
     .replace(/[^a-z0-9]/g, "");
+}
+function sanitizeGeometry(geometry) {
+  if (!geometry) return geometry;
+
+  if (geometry.type === "GeometryCollection") {
+    return {
+      ...geometry,
+      geometries: geometry.geometries.map(sanitizeGeometry),
+    };
+  }
+
+  function sanitizeCoordinates(coordinates) {
+    if (!Array.isArray(coordinates)) return coordinates;
+
+    // A coordinate pair or triplet: [longitude, latitude, ...]
+    if (typeof coordinates[0] === "number") {
+      const [longitude, latitude, ...rest] = coordinates;
+
+      const safeLatitude = Math.max(
+        -89.9,
+        Math.min(89.9, latitude)
+      );
+
+      return [longitude, safeLatitude, ...rest];
+    }
+
+    return coordinates.map(sanitizeCoordinates);
+  }
+
+  return {
+    ...geometry,
+    coordinates: sanitizeCoordinates(geometry.coordinates),
+  };
 }
 
 function getEventColor(event) {
@@ -139,6 +173,26 @@ export default function CesiumGlobe({ onCountrySelect, liveEvents = [] }) {
     });
 
     viewerRef.current = viewer;
+    const mapResizeObserver = new ResizeObserver(() => {
+  if (cancelled || viewer.isDestroyed()) return;
+
+  const container = mapRef.current;
+  if (!container) return;
+
+  const rect = container.getBoundingClientRect();
+
+  // Never ask Cesium to render into a zero-sized container.
+  if (rect.width <= 0 || rect.height <= 0) return;
+
+  viewer.resize();
+  viewer.forceResize();
+
+  // Resume rendering if Cesium stopped after the previous error.
+  viewer.useDefaultRenderLoop = true;
+  viewer.scene.requestRender();
+});
+
+mapResizeObserver.observe(mapRef.current);
 
     const satelliteProvider = new UrlTemplateImageryProvider({
       url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
@@ -234,60 +288,76 @@ export default function CesiumGlobe({ onCountrySelect, liveEvents = [] }) {
       console.log("Polygon fill enabled:", entity.polygon.fill);
     }
 
-    async function loadCountryShapes() {
-      try {
-        const response = await fetch("/data/country-shapes.geojson");
+   
+async function loadCountryShapes() {
+  try {
+    const response = await fetch("/data/country-shapes.geojson");
 
-        if (!response.ok) {
-          throw new Error(
-            `Country GeoJSON request failed: HTTP ${response.status}`
-          );
-        }
+    if (!response.ok) {
+      throw new Error(`Country GeoJSON request failed: HTTP ${response.status}`);
+    }
 
-        const geojson = await response.json();
+    const geojson = await response.json();
 
-        if (!Array.isArray(geojson.features)) {
-          throw new Error(
-            "The country GeoJSON does not contain a features array."
-          );
-        }
+    if (!Array.isArray(geojson.features)) {
+      throw new Error("Country GeoJSON has no features array.");
+    }
 
-        if (cancelled || viewer.isDestroyed()) return;
+    if (cancelled || viewer.isDestroyed()) return;
 
-        countryGeoJSONRef.current = geojson;
+    // Correct coordinates near the poles before Cesium processes them.
+    const safeGeoJSON = {
+      ...geojson,
+      features: geojson.features.map((feature) => ({
+        ...feature,
+        geometry: sanitizeGeometry(feature.geometry),
+      })),
+    };
 
-        const dataSource = await GeoJsonDataSource.load(geojson, {
-          fill: BASE_COUNTRY_FILL,
-          stroke: Color.TRANSPARENT,
-          strokeWidth: 0,
-          clampToGround: false,
-        });
+    // Turf uses this same corrected dataset for country selection.
+    countryGeoJSONRef.current = safeGeoJSON;
 
-        if (cancelled || viewer.isDestroyed()) return;
+    const dataSource = await GeoJsonDataSource.load(safeGeoJSON, {
+      fill: BASE_COUNTRY_FILL,
+      stroke: Color.TRANSPARENT,
+      strokeWidth: 0,
+      clampToGround: false,
+    });
 
-        for (const entity of dataSource.entities.values) {
-          if (!entity.polygon) continue;
+    if (cancelled || viewer.isDestroyed()) return;
 
-          entity.polygon.height = COUNTRY_OVERLAY_HEIGHT;
+    for (const entity of dataSource.entities.values) {
+      if (!entity.polygon) continue;
 
-          const entityName =
-            readCountryName(entity.properties) || entity.name || "";
-          const nameKey = normalizeCountryName(entityName);
+      // Explicitly use geodesic polygon edges.
+      entity.polygon.arcType = ArcType.GEODESIC;
+      entity.polygon.height = COUNTRY_OVERLAY_HEIGHT;
 
-          if (nameKey) countryEntityByName.set(nameKey, entity);
-          if (entity.id != null) {
-            countryEntityById.set(String(entity.id), entity);
-          }
-        }
+      const entityName =
+        readCountryName(entity.properties) || entity.name || "";
 
-        viewer.dataSources.add(dataSource);
+      const nameKey = normalizeCountryName(entityName);
 
-        console.log("Country shapes loaded:", geojson.features.length);
-        console.log("Country hover polygons ready:", countryEntityByName.size);
-      } catch (error) {
-        if (!cancelled) console.error("Country shapes failed:", error);
+      if (nameKey) {
+        countryEntityByName.set(nameKey, entity);
+      }
+
+      if (entity.id != null) {
+        countryEntityById.set(String(entity.id), entity);
       }
     }
+
+    viewer.dataSources.add(dataSource);
+
+    console.log("Country shapes loaded:", safeGeoJSON.features.length);
+    console.log("Country polygons ready:", countryEntityByName.size);
+  } catch (error) {
+    if (!cancelled) {
+      console.error("Country shapes failed:", error);
+    }
+  }
+}
+
 
     loadCountryShapes();
 
@@ -374,6 +444,7 @@ export default function CesiumGlobe({ onCountrySelect, liveEvents = [] }) {
 
     return () => {
       cancelled = true;
+      mapResizeObserver.disconnect();
       clearHoveredCountry();
       viewer.scene.canvas.removeEventListener("mouseleave", handleCanvasLeave);
 

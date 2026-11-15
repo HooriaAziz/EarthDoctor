@@ -6,6 +6,7 @@
 }
 
 body {
+  margin: 0;
   background: #000;
   color: #edf3fb;
   font-family: 'DM Sans', sans-serif;
@@ -170,16 +171,30 @@ body {
   background: #000;
 }
 
+/* Cesium map sizing */
 .cesium-map {
+  position: relative;
+  display: block;
+  width: 100%;
+  min-width: 0;
+  height: 490px;
+  min-height: 360px;
+  overflow: hidden;
+}
+
+.cesium-map .cesium-widget,
+.cesium-map canvas {
   width: 100%;
   height: 100%;
 }
 
+/* Map caption */
 .map-caption {
   position: absolute;
   bottom: 12px;
   left: 14px;
   right: 14px;
+  z-index: 10;
   display: flex;
   justify-content: space-between;
   gap: 10px;
@@ -189,6 +204,135 @@ body {
   pointer-events: none;
 }
 
+/* Map overlay positioning */
+.map-frame-controls {
+  position: relative !important;
+  isolation: isolate;
+  min-width: 0;
+}
+
+/* Dropdown */
+.map-mode-dropdown {
+  position: absolute;
+  top: 18px;
+  left: 18px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 210px;
+  pointer-events: auto;
+}
+
+.map-mode-dropdown label {
+  color: #b3c7d8;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.4px;
+}
+
+.map-select-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.map-select-wrapper select {
+  display: block;
+  width: 100%;
+  height: 44px;
+  padding: 0 36px 0 12px;
+  appearance: none;
+  border: 1px solid #41647b;
+  border-radius: 9px;
+  background: rgba(16, 31, 48, 0.97);
+  color: #ffffff;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  outline: none;
+}
+
+.map-select-wrapper select:hover,
+.map-select-wrapper select:focus {
+  border-color: #65caff;
+}
+
+.map-select-wrapper select option {
+  background: #101f30;
+  color: #ffffff;
+}
+
+.map-select-chevron {
+  position: absolute;
+  right: 13px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #70d7f1;
+  pointer-events: none;
+  font-size: 18px;
+}
+
+/* Event legend */
+.event-map-legend {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  z-index: 1000;
+  width: 168px;
+  padding: 13px;
+  border: 1px solid #41647b;
+  border-radius: 10px;
+  background: rgba(16, 31, 48, 0.97);
+  color: #dceaf4;
+  pointer-events: none;
+}
+
+.event-map-legend h4 {
+  margin: 0 0 12px;
+  color: #8da8bb;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1.3px;
+}
+
+.event-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 9px 0;
+  color: #c2d2df;
+  font-size: 10px;
+}
+
+.event-legend-dot {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 8px;
+  border-radius: 50%;
+}
+
+.fire-dot {
+  background: #ff8a43;
+  box-shadow: 0 0 7px rgba(255, 138, 67, 0.6);
+}
+
+.earthquake-dot {
+  background: #62d9ff;
+  box-shadow: 0 0 7px rgba(98, 217, 255, 0.6);
+}
+
+.storm-dot {
+  background: #8caeff;
+  box-shadow: 0 0 7px rgba(140, 174, 255, 0.6);
+}
+
+.other-dot {
+  background: #71e5cf;
+  box-shadow: 0 0 7px rgba(113, 229, 207, 0.6);
+}
+
+/* Environmental indicators */
 .indicators-section {
   padding-top: 35px;
 }
@@ -264,6 +408,7 @@ body {
   font-size: 10px;
 }
 
+/* Summary */
 .summary-section {
   display: flex;
   gap: 20px;
@@ -311,6 +456,7 @@ body {
   gap: 7px;
 }
 
+/* Footer */
 .footer {
   display: flex;
   justify-content: space-between;
@@ -321,6 +467,7 @@ body {
   letter-spacing: 1px;
 }
 
+/* Tablet */
 @media (max-width: 800px) {
   .navigation {
     display: none;
@@ -333,9 +480,14 @@ body {
   .map-frame {
     height: 390px;
   }
+
+  .cesium-map {
+    height: 390px;
+  }
 }
 
-@media (max-width: 480px) {
+/* Mobile */
+@media (max-width: 600px) {
   .topbar {
     padding: 0 5%;
   }
@@ -353,7 +505,24 @@ body {
   }
 
   .map-frame {
-    height: 330px;
+    height: 390px;
+  }
+
+  .cesium-map {
+    height: 390px;
+  }
+
+  .map-mode-dropdown {
+    top: 10px;
+    left: 10px;
+    width: 180px;
+  }
+
+  .event-map-legend {
+    top: 66px;
+    right: 10px;
+    width: 145px;
+    padding: 10px;
   }
 
   .map-caption {
@@ -381,5 +550,19 @@ body {
   .footer {
     gap: 12px;
     flex-direction: column;
+  }
+}
+
+@media (max-width: 480px) {
+  .map-frame {
+    height: 330px;
+  }
+
+  .cesium-map {
+    height: 330px;
+  }
+
+  .map-mode-dropdown {
+    width: 170px;
   }
 }
