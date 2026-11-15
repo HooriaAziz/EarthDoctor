@@ -1,4 +1,6 @@
+
 /* Country Emissions Profile — Earth Doctor AI */
+
 .edgar-profile-section {
   margin-top: 30px;
   padding: 24px;
@@ -80,7 +82,11 @@
 
 .edgar-stat-primary {
   border-color: #28618a;
-  background: linear-gradient(145deg, rgba(24, 78, 116, 0.5), rgba(10, 25, 40, 0.9));
+  background: linear-gradient(
+    145deg,
+    rgba(24, 78, 116, 0.5),
+    rgba(10, 25, 40, 0.9)
+  );
 }
 
 .edgar-stat-label {
@@ -95,6 +101,7 @@
   font-size: clamp(1.35rem, 2.5vw, 1.85rem);
   line-height: 1.2;
   overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
 }
 
 .edgar-stat-card strong.edgar-change-lower {
@@ -122,6 +129,12 @@
   padding: 17px;
 }
 
+.edgar-trend-card,
+.edgar-sector-card {
+  min-width: 0;
+  overflow: hidden;
+}
+
 .edgar-card-heading {
   align-items: center;
   margin-bottom: 15px;
@@ -138,6 +151,7 @@
   margin: 5px 0 0;
   color: #8298ad;
   font-size: 0.75rem;
+  line-height: 1.45;
 }
 
 .edgar-unit-tag {
@@ -148,31 +162,54 @@
   font-size: 0.65rem;
 }
 
+/* Historical emissions chart */
+
 .edgar-trend-chart {
-  height: 150px;
-  border-bottom: 1px solid #1c3043;
-  background: repeating-linear-gradient(
-    to bottom,
-    transparent 0,
-    transparent 36px,
-    rgba(109, 140, 166, 0.12) 37px,
-    transparent 38px
-  );
+  width: 100%;
+  height: auto;
+  min-height: 210px;
+  overflow: visible;
+  border: 0;
+  background: none;
 }
 
 .edgar-trend-chart svg {
   display: block;
   width: 100%;
-  height: 100%;
+  height: auto;
   overflow: visible;
 }
 
-.edgar-trend-chart line {
-  stroke: #314a60;
+.edgar-chart-gridline {
+  stroke: #294054;
   stroke-width: 1;
+  stroke-dasharray: 4 5;
+  vector-effect: non-scaling-stroke;
 }
 
-.edgar-trend-chart polyline {
+.edgar-chart-y-label,
+.edgar-chart-x-label {
+  fill: #9aafc2;
+  font-family: inherit;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.edgar-chart-y-label {
+  text-anchor: end;
+}
+
+.edgar-chart-x-label {
+  text-anchor: middle;
+}
+
+.edgar-chart-axis-line {
+  stroke: #496176;
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.edgar-chart-trend-line {
   fill: none;
   stroke: #62c7bb;
   stroke-width: 3;
@@ -181,24 +218,87 @@
   vector-effect: non-scaling-stroke;
 }
 
-.edgar-chart-axis {
+.edgar-chart-data-point {
+  fill: #07111d;
+  stroke: #62c7bb;
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.edgar-chart-latest-point {
+  fill: #f0c879;
+  stroke: #fff1ca;
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.edgar-chart-latest-label {
+  fill: #f0d69b;
+  font-size: 11px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.edgar-chart-summary {
   display: flex;
-  justify-content: space-between;
-  margin-top: 8px;
-  color: #71869b;
-  font-size: 0.68rem;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin-top: 10px;
+  padding: 11px 12px;
+  border: 1px solid #263e52;
+  border-radius: 9px;
+  background: rgba(14, 34, 51, 0.75);
+  color: #a9bdce;
+  font-size: 0.73rem;
+  line-height: 1.5;
+}
+
+.edgar-chart-summary strong {
+  color: #edf5fb;
+  font-variant-numeric: tabular-nums;
+}
+
+.edgar-chart-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 180px;
+  padding: 18px;
+  border: 1px dashed #30485d;
+  border-radius: 10px;
+  color: #91a5b8;
+  font-size: 0.82rem;
+  text-align: center;
+}
+
+/* Sector breakdown */
+
+.edgar-sector-total {
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border: 1px solid #29465d;
+  border-radius: 9px;
+  background: rgba(17, 43, 63, 0.7);
+  color: #a9bdce;
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.edgar-sector-total strong {
+  color: #f0f6fb;
+  font-variant-numeric: tabular-nums;
 }
 
 .edgar-sector-list {
   display: flex;
   flex-direction: column;
-  gap: 11px;
+  gap: 15px;
 }
 
 .edgar-sector-row {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 7px;
 }
 
 .edgar-sector-label {
@@ -207,18 +307,27 @@
   justify-content: space-between;
   gap: 12px;
   color: #b8c7d5;
-  font-size: 0.73rem;
+  font-size: 0.75rem;
+  line-height: 1.4;
 }
 
 .edgar-sector-label strong {
   flex: 0 0 auto;
   color: #e5eff8;
+  font-size: 0.75rem;
   font-variant-numeric: tabular-nums;
-  font-size: 0.73rem;
+  white-space: nowrap;
+}
+
+.edgar-sector-share {
+  margin-left: 5px;
+  color: #83c6c0;
+  font-size: 0.69rem;
+  font-weight: 600;
 }
 
 .edgar-sector-track {
-  height: 6px;
+  height: 9px;
   overflow: hidden;
   border-radius: 999px;
   background: #182a3b;
@@ -227,9 +336,13 @@
 .edgar-sector-track span {
   display: block;
   height: 100%;
+  min-width: 2px;
   border-radius: inherit;
   background: linear-gradient(90deg, #3b94ba, #66c9bc);
+  transition: width 0.35s ease;
 }
+
+/* Source notes */
 
 .edgar-profile-footnote {
   display: grid;
@@ -264,6 +377,8 @@
   align-items: center;
 }
 
+/* Responsive layout */
+
 @media (max-width: 900px) {
   .edgar-stat-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -271,6 +386,10 @@
 
   .edgar-detail-grid {
     grid-template-columns: 1fr;
+  }
+
+  .edgar-trend-chart {
+    min-height: 190px;
   }
 }
 
@@ -296,8 +415,30 @@
     padding: 12px;
   }
 
+  .edgar-detail-card {
+    padding: 13px;
+  }
+
+  .edgar-card-heading {
+    align-items: flex-start;
+    gap: 8px;
+  }
+
   .edgar-profile-footnote {
     grid-template-columns: 1fr;
     gap: 8px;
+  }
+
+  .edgar-chart-y-label,
+  .edgar-chart-x-label {
+    font-size: 10px;
+  }
+
+  .edgar-sector-label {
+    font-size: 0.7rem;
+  }
+
+  .edgar-sector-label strong {
+    font-size: 0.7rem;
   }
 }
