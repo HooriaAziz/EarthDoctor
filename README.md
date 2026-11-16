@@ -62,3 +62,36 @@ npm run actions:generate -- USA IND NPL
 Run `npm run lint` and `npm run build` to check the app.
 `python scripts/extract_edgar_global.py` regenerates
 `src/assets/edgarGlobalData.js` from the bundled EDGAR workbook.
+
+## Docker deployment to Vultr
+
+Create an Ubuntu x86-64 VM, install Docker Engine + Compose, curl and flock.
+Create a `deploy` user with Docker access (administrative host access), own
+`/opt/earthdoctor`, and allow inbound TCP 22 and 80. Install your deployment SSH
+public key in that user's authorized_keys. Verify its host key using the Vultr
+console before saving a known_hosts entry.
+
+Create a private Docker Hub repository `USERNAME/earthdoctor`. Create a Read &
+Write token for CI and a separate Read token for the VM. As deploy on the VM,
+run `docker login -u USERNAME` and enter the Read token.
+
+GitHub Settings > Secrets and variables > Actions:
+- Secrets: DOCKERHUB_TOKEN, VULTR_SSH_PRIVATE_KEY, VULTR_SSH_KNOWN_HOSTS.
+- Variables: DOCKERHUB_USERNAME, VULTR_HOST, VULTR_USER=deploy, VULTR_SSH_PORT=22.
+
+Create `/opt/earthdoctor/app.env` on the VM using .env.example. Set NVIDIA_API_KEY
+and optionally MONGODB_URI; chmod 600 app.env. Allow the VM IP in Atlas if used.
+No app keys belong in the image or workflow. No Vultr API key is needed.
+
+Push to main to test, publish an immutable Docker image and deploy it over SSH.
+PR builds do not publish or deploy. The app is served at http://VM_IP; add TLS
+before using the deployment for sensitive traffic. Brief deployment downtime is
+expected. Failed readiness checks restore the previous image when available.
+Full-repo lint currently has unrelated EarthGlobe/trendAnalysis errors; CI checks
+the server and AI integration explicitly.
+
+Manual rollback on the VM:
+```bash
+cd /opt/earthdoctor
+bash deploy.sh "$(cat previous-image)"
+```

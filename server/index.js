@@ -2,6 +2,7 @@
 // generated once with Nemotron on first request, then cached (MongoDB Atlas,
 // with an in-memory fallback) for ACTIONS_CACHE_HOURS. Start: `npm run server`.
 import { createServer } from "node:http";
+import { serveStatic } from "./static.js";
 import { config, missingConfig } from "./config.js";
 import { closeDb } from "./db.js";
 import { getOrGenerate } from "./actions.js";
@@ -62,6 +63,7 @@ const server = createServer(async (req, res) => {
       }
     }
 
+    if (!url.pathname.startsWith('/api/') && await serveStatic(req, res, url)) return;
     return send(res, 404, { error: "not-found" });
   } catch (error) {
     console.error(error);
