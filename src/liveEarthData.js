@@ -1,3 +1,5 @@
+import { weatherUrl } from "./lib/weatherRequest.js";
+
 const EONET_URL = "https://eonet.gsfc.nasa.gov/api/v3/events?status=open&limit=100";
 const USGS_URL = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_day.geojson";
 
@@ -10,7 +12,9 @@ async function fetchJson(url, sourceName, signal, headers = {}) {
   });
 
   if (!response.ok) {
-    throw new Error(`${sourceName} returned HTTP ${response.status}`);
+    const body = await response.json().catch(() => null);
+    const reason = typeof body?.reason === "string" ? `: ${body.reason.slice(0, 200)}` : "";
+    throw new Error(`${sourceName} returned HTTP ${response.status}${reason}`);
   }
 
   return response.json();
@@ -163,23 +167,36 @@ function isInsideLower48Bounds(latitude, longitude) {
   );
 }
 
-export async function fetchSelectedLocationData({ latitude, longitude, signal }) {
-  const weatherUrl = new URL("https://api.open-meteo.com/v1/forecast");
-  weatherUrl.search = new URLSearchParams({
-    latitude: String(latitude),
-    longitude: String(longitude),
-    current:
-      "temperature_2m,apparent_temperature,relative_humidity_2m,precipitation,wind_speed_10m,wind_direction_10m,surface_pressure,cloud_cover,weather_code",
-    // Hourly model series: past 24 h (model analysis) + 48 h forecast.
-    hourly: "temperature_2m,relative_humidity_2m,precipitation,wind_speed_10m",
-    past_days: "1",
-    forecast_days: "2",
-    temperature_unit: "celsius",
-    wind_speed_unit: "kmh",
-    precipitation_unit: "mm",
-    timezone: "auto",
-  }).toString();
+async function fetchWeather(latitude, longitude, signal) {
+  const requestSignal = (milliseconds = 12000) => {
+    const timeout = AbortSignal.timeout(milliseconds);
+    return signal ? AbortSignal.any([signal, timeout]) : timeout;
+  };
+  try {
+    return await fetchJson(weatherUrl(latitude, longitude).toString(), "Open-Meteo weather", requestSignal());
+  } catch (error) {
+    if (signal?.aborted) throw error;
+    // Browser network/CORS failures and timeouts can succeed from our server.
+    // HTTP errors (including rate limits) should remain visible as API errors.
+    if (!(error instanceof TypeError) && error.name !== "TimeoutError") throw error;
+  }
 
+  const params = new URLSearchParams({ latitude: String(latitude), longitude: String(longitude) });
+  try {
+    return await fetchJson(`/api/weather?${params}`, "Weather fallback", requestSignal(15000));
+  } catch (error) {
+    if (signal?.aborted) throw error;
+    if (error.name === "TimeoutError") {
+      throw new Error("Direct weather request failed; weather fallback timed out.", { cause: error });
+    }
+    if (error instanceof TypeError) {
+      throw new Error("Direct weather request failed; unable to reach the weather fallback server.", { cause: error });
+    }
+    throw new Error(`Direct weather request failed; ${error.message}`, { cause: error });
+  }
+}
+
+export async function fetchSelectedLocationData({ latitude, longitude, signal }) {
   const airQualityUrl = new URL("https://air-quality-api.open-meteo.com/v1/air-quality");
   airQualityUrl.search = new URLSearchParams({
     latitude: String(latitude),
@@ -198,7 +215,7 @@ export async function fetchSelectedLocationData({ latitude, longitude, signal })
   }).toString();
 
   const requests = [
-    fetchJson(weatherUrl.toString(), "Open-Meteo weather", signal),
+    fetchWeather(latitude, longitude, signal),
     fetchJson(airQualityUrl.toString(), "Open-Meteo air quality", signal),
   ];
 

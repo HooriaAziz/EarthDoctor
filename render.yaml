@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: earthdoctor
+    runtime: node
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: npm run server
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NODE_ENV
+        value: production
+      - key: NVIDIA_API_KEY
+        sync: false
+      - key: MONGODB_DB
+        value: earthdoctor

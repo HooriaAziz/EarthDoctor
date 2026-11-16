@@ -1,4 +1,4 @@
-import { AlertTriangle, MousePointerClick, X } from "lucide-react";
+import { AlertTriangle, MousePointerClick, RefreshCw, X } from "lucide-react";
 import { Panel, StatusBadge } from "./ui";
 import { cardinal, fmtCoord, fmtDateTime, fmtInt, fmtLocalWallClock, fmtNum, isNum } from "../lib/format";
 import { AQI_SCALE_MAX, aqiCategory, describeWeatherCode } from "../lib/weather";
@@ -72,6 +72,18 @@ export default function LocationPanel({ location, state, onClear }) {
                   : undefined
             }
           />
+          {hasPoint && (
+            <button
+              type="button"
+              className="icon-btn"
+              onClick={state.reload}
+              disabled={state.status === "loading"}
+              aria-label="Retry weather and air quality"
+              title="Retry weather and air quality"
+            >
+              <RefreshCw size={14} />
+            </button>
+          )}
           {location && (
             <button type="button" className="icon-btn" onClick={onClear} aria-label="Clear selection" title="Clear selection">
               <X size={14} />

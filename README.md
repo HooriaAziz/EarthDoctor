@@ -11,8 +11,26 @@ npm run dev        # web app: http://localhost:5173
 npm run server     # AI API: http://localhost:8787 (separate terminal)
 ```
 
-The Vite development server proxies `/api/*` to the API server. For production,
-route `/api/*` to the Node server alongside the built frontend.
+The Vite development server proxies `/api/*` to the API server. In production,
+the Node server serves the built frontend and API together.
+
+Weather normally loads directly from Open-Meteo. If that browser request fails
+or times out, the app retries through `/api/weather` on the Node server. Keep
+`npm run server` running locally for this fallback. The retry button in Location
+intelligence refreshes weather and air quality without reselecting a point.
+
+## Deploy to Render
+
+Push this repository to GitHub. In Render, choose New > Blueprint and connect
+the repository. Render reads render.yaml and creates a Node web service.
+Enter NVIDIA_API_KEY when prompted. Optionally add MONGODB_URI in the service's
+Environment settings for persistent AI caching; allow Render's outbound IPs in
+Atlas Network Access if using Atlas.
+
+Render builds with `npm ci --include=dev && npm run build` and starts with
+`npm run server`. It provides HTTPS and automatic deployments from the connected
+branch. No Docker Hub, Vultr VM, SSH deployment keys or GitHub Actions are needed.
+Keep secrets in Render's environment settings, never in GitHub source files.
 
 ## AI action suggestions
 
@@ -55,43 +73,15 @@ npm run actions:generate -- USA IND NPL
 | Endpoint | Description |
 |---|---|
 | `GET /api/health` | Configuration and cache status |
+| `GET /api/weather?latitude=...&longitude=...` | Open-Meteo weather fallback for a selected point |
 | `GET /api/actions/:code` | Generate or reuse actions for an EDGAR code, such as `IND` |
 
 ## Checks and data
 
 Run `npm run lint` and `npm run build` to check the app.
+Run `node --test src/liveEarthData.test.js server/weather.test.js server/actions.test.js`
+to check weather recovery and AI action behavior.
 `python scripts/extract_edgar_global.py` regenerates
 `src/assets/edgarGlobalData.js` from the bundled EDGAR workbook.
 
-## Docker deployment to Vultr
 
-Create an Ubuntu x86-64 VM, install Docker Engine + Compose, curl and flock.
-Create a `deploy` user with Docker access (administrative host access), own
-`/opt/earthdoctor`, and allow inbound TCP 22 and 80. Install your deployment SSH
-public key in that user's authorized_keys. Verify its host key using the Vultr
-console before saving a known_hosts entry.
-
-Create a private Docker Hub repository `USERNAME/earthdoctor`. Create a Read &
-Write token for CI and a separate Read token for the VM. As deploy on the VM,
-run `docker login -u USERNAME` and enter the Read token.
-
-GitHub Settings > Secrets and variables > Actions:
-- Secrets: DOCKERHUB_TOKEN, VULTR_SSH_PRIVATE_KEY, VULTR_SSH_KNOWN_HOSTS.
-- Variables: DOCKERHUB_USERNAME, VULTR_HOST, VULTR_USER=deploy, VULTR_SSH_PORT=22.
-
-Create `/opt/earthdoctor/app.env` on the VM using .env.example. Set NVIDIA_API_KEY
-and optionally MONGODB_URI; chmod 600 app.env. Allow the VM IP in Atlas if used.
-No app keys belong in the image or workflow. No Vultr API key is needed.
-
-Push to main to test, publish an immutable Docker image and deploy it over SSH.
-PR builds do not publish or deploy. The app is served at http://VM_IP; add TLS
-before using the deployment for sensitive traffic. Brief deployment downtime is
-expected. Failed readiness checks restore the previous image when available.
-Full-repo lint currently has unrelated EarthGlobe/trendAnalysis errors; CI checks
-the server and AI integration explicitly.
-
-Manual rollback on the VM:
-```bash
-cd /opt/earthdoctor
-bash deploy.sh "$(cat previous-image)"
-```

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { fetchLiveEarthData, fetchSelectedLocationData } from "../liveEarthData";
 
 // Refresh cadences are per feed, not a uniform "live" interval:
@@ -62,6 +62,8 @@ const IDLE_LOCATION = { status: "idle", data: null, error: null };
 
 export function useLocationData(latitude, longitude) {
   const [state, setState] = useState(IDLE_LOCATION);
+  const [reloadCount, setReloadCount] = useState(0);
+  const reload = useCallback(() => setReloadCount((count) => count + 1), []);
   const hasPoint =
     typeof latitude === "number" && typeof longitude === "number";
 
@@ -127,7 +129,7 @@ export function useLocationData(latitude, longitude) {
       window.clearInterval(intervalId);
       controller?.abort();
     };
-  }, [hasPoint, latitude, longitude, pointKey]);
+  }, [hasPoint, latitude, longitude, pointKey, reloadCount]);
 
-  return state;
+  return { ...state, reload };
 }

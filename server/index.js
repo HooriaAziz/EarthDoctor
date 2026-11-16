@@ -8,6 +8,7 @@ import { closeDb } from "./db.js";
 import { getOrGenerate } from "./actions.js";
 import { cacheStatus } from "./cache.js";
 import { listCountries } from "./countryContext.js";
+import { weatherResponse } from "./weather.js";
 
 const COUNTRY_CODES = new Set(listCountries().map((c) => c.code));
 
@@ -39,6 +40,11 @@ const server = createServer(async (req, res) => {
         cacheHours: config.actions.cacheHours,
         cache: cacheStatus(),
       });
+    }
+
+    if (req.method === "GET" && url.pathname === "/api/weather") {
+      const { status, body } = await weatherResponse(url.searchParams);
+      return send(res, status, body);
     }
 
     const match = url.pathname.match(/^\/api\/actions\/([A-Za-z]{3})$/);
