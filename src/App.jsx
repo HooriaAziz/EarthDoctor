@@ -9,6 +9,7 @@ import EventSummary from "./components/EventSummary";
 import LocationAnalytics from "./components/LocationAnalytics";
 import SeismicityPanel from "./components/SeismicityPanel";
 import GlobalTrends from "./components/GlobalTrends";
+import ActionPanel from "./components/ActionPanel";
 import EventExplorer from "./components/EventExplorer";
 import SourcesPanel from "./components/SourcesPanel";
 import AroundEarth from "./components/AroundEarth";
@@ -88,6 +89,10 @@ function App() {
     },
     [eventsData.events, issueCommand]
   );
+
+  // Country (EDGAR code) for the AI action suggestions.
+  const actionProfile = selectedLocation?.name ? getEdgarCountryProfile(selectedLocation) : null;
+  const actionCountry = actionProfile ? { code: actionProfile.code, name: actionProfile.name } : null;
 
   const selectedEvent = selectedEventId
     ? eventsData.events.find((event) => event.id === selectedEventId) ?? null
@@ -173,6 +178,8 @@ function App() {
             </div>
 
             <LocationAnalytics location={selectedLocation} state={locationState} />
+
+            <ActionPanel country={actionCountry} />
 
             {selectedLocation?.name && <CountryEmissionsProfile country={selectedLocation} />}
 

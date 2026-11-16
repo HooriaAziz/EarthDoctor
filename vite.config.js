@@ -6,4 +6,15 @@ export default defineConfig({
   define: {
     CESIUM_BASE_URL: JSON.stringify("/cesiumStatic"),
   },
+  server: {
+    // Forward API calls to the Node server (npm run server).
+    proxy: {
+      "/api": { target: "http://localhost:8787", changeOrigin: true },
+    },
+  },
+  preview: {
+    proxy: {
+      "/api": { target: "http://localhost:8787", changeOrigin: true },
+    },
+  },
 });

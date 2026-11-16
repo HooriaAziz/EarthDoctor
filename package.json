@@ -7,13 +7,16 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "server": "node server/index.js",
+    "actions:generate": "node server/cli.js"
   },
   "dependencies": {
     "@turf/boolean-point-in-polygon": "^7.4.0",
     "@turf/helpers": "^7.4.0",
     "cesium": "^1.147.0",
     "lucide-react": "^1.73.0",
+    "mongodb": "^6.22.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "react-globe.gl": "^2.38.0",
