@@ -13,9 +13,9 @@ const ORBIT_OPTIONS = [
 ];
 
 const ORBIT_CONFIG = [
-  { id: "LEO", radius: 1.48, count: 850, color: 0x51d7ff },
-  { id: "MEO", radius: 2.05, count: 350, color: 0xffc36b },
-  { id: "GEO", radius: 2.65, count: 220, color: 0xb69aff },
+  { id: "LEO", radius: 1.48, count: 850, color: 0x398cf0 },
+  { id: "MEO", radius: 2.05, count: 350, color: 0x13b981 },
+  { id: "GEO", radius: 2.65, count: 220, color: 0xe8b341 },
 ];
 
 function seededRandom(seed) {
@@ -581,7 +581,7 @@ export default function OrbitalDebrisSimulation({
         container.removeChild(renderer.domElement);
       }
     };
-  }, [mode]);
+  }, [isOzoneMode]);
 
   useEffect(() => {
     pausedRef.current = paused;
@@ -616,14 +616,12 @@ export default function OrbitalDebrisSimulation({
       <div className="orbital-simulation-heading">
         <div>
           <p className="orbital-simulation-eyebrow">
-            <span className="orbital-live-dot" />
-
             {isOzoneMode
               ? "ILLUSTRATIVE ATMOSPHERIC MODEL"
               : "ILLUSTRATIVE 3D MODEL"}
           </p>
 
-          <h2>
+          <h2 className="panel-title">
             {isOzoneMode
               ? "Earth's ozone layer"
               : "Earth's orbital environment"}

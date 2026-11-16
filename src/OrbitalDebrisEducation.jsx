@@ -6,6 +6,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import "./OrbitalDebrisEducation.css";
+import "./OzoneEducation.css";
 
 export default function OrbitalDebrisEducation() {
   return (

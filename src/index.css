@@ -1,31 +1,167 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap");
 
-/* Earth Doctor AI — Starry background */
+/* =========================================================
+   EARTH DOCTOR — DESIGN TOKENS
+   Deep RGB intelligence palette on near-black surfaces.
+   ========================================================= */
+
+:root {
+  color-scheme: dark;
+
+  /* Surfaces */
+  --bg-app: #070b12;
+  --bg-nav: #0a101a;
+  --bg-panel: #0e1724;
+  --bg-panel-2: #132031;
+  --bg-elevated: #18273a;
+  --bg-inset: #0a121d;
+  --border: #28384b;
+  --border-subtle: #1b2838;
+  --border-strong: #3a4e66;
+
+  /* Text */
+  --text-1: #f1f5f9;
+  --text-2: #a1b0c2;
+  --text-3: #70849a;
+
+  /* Blue — navigation, selection, primary controls, neutral series */
+  --blue: #2563d9;
+  --blue-bright: #398cf0;
+  --blue-surface: #102a4d;
+
+  /* Green — connected, normal, success */
+  --green: #008b6b;
+  --green-bright: #13b981;
+  --green-surface: #103b32;
+
+  /* Red — critical, failed, destructive */
+  --red: #c82e42;
+  --red-bright: #e54858;
+  --red-surface: #491922;
+
+  /* Supporting categorical hues (data only) */
+  --amber: #e8b341;
+  --amber-surface: #3d2f12;
+  --orange: #f0884b;
+  --ice: #7cc8e8;
+  --slate: #8d9db0;
+
+  /* Type */
+  --font-ui: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+
+  --fs-11: 11px;
+  --fs-12: 12px;
+  --fs-13: 13px;
+  --fs-14: 14px;
+  --fs-16: 16px;
+  --fs-18: 18px;
+  --fs-22: 22px;
+  --fs-28: 28px;
+
+  /* Shape & spacing */
+  --radius-sm: 4px;
+  --radius: 6px;
+  --radius-lg: 8px;
+  --control-h: 30px;
+  --control-h-sm: 26px;
+  --header-h: 56px;
+  --gap: 12px;
+
+  --focus-ring: 0 0 0 2px var(--bg-app), 0 0 0 4px var(--blue-bright);
+  --t-fast: 120ms ease;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
 
 html,
 body,
 #root {
   min-height: 100%;
-  background-color: #030509;
 }
 
 body {
   margin: 0;
-  background-image:
-    radial-gradient(1px 1px at 20px 30px, #ffffff 99%, transparent),
-    radial-gradient(1px 1px at 100px 80px, #8ecbff 99%, transparent),
-    radial-gradient(2px 2px at 180px 150px, #ffffff 99%, transparent),
-    radial-gradient(1px 1px at 250px 40px, #b9dcff 99%, transparent),
-    radial-gradient(1px 1px at 300px 220px, #ffffff 99%, transparent),
-    radial-gradient(2px 2px at 60px 250px, #8ecbff 99%, transparent);
-
-  background-size: 350px 300px;
-  background-repeat: repeat;
-  background-color: #030509;
-  background-attachment: fixed;
+  background: var(--bg-app);
+  color: var(--text-1);
+  font-family: var(--font-ui);
+  font-size: var(--fs-13);
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: "cv11", "ss01";
 }
 
-/* Keep the dashboard above the background */
-#root {
-  position: relative;
-  z-index: 1;
+h1,
+h2,
+h3,
+h4,
+p {
+  margin: 0;
+}
+
+a {
+  color: var(--blue-bright);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+button,
+input,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+:where(a, button, input, select, [tabindex]):focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.mono,
+.num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.num {
+  font-feature-settings: "tnum";
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+::selection {
+  background: var(--blue-surface);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

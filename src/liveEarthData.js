@@ -36,26 +36,47 @@ function firstCoordinatePair(value) {
 }
 
 function normalizeEonetEvent(event) {
-  const latestGeometry = Array.isArray(event.geometry)
-    ? event.geometry[event.geometry.length - 1]
+  const geometries = Array.isArray(event.geometry) ? event.geometry : [];
+  const latestGeometry = geometries.length
+    ? geometries[geometries.length - 1]
     : null;
   const coordinates = firstCoordinatePair(latestGeometry?.coordinates);
   const category =
     event.categories?.map((item) => item.title).filter(Boolean).join(", ") ||
     "Natural event";
 
+  // EONET reports a per-geometry magnitude with its own unit
+  // (e.g. acres for wildfires, kts for storms). Keep it as reported.
+  const magnitudeValue = Number.isFinite(latestGeometry?.magnitudeValue)
+    ? latestGeometry.magnitudeValue
+    : null;
+
+  const sourceLinks = Array.isArray(event.sources)
+    ? event.sources
+        .filter((source) => source?.url)
+        .map((source) => ({ id: source.id || "Source", url: source.url }))
+    : [];
+
   return {
     id: `eonet-${event.id}`,
     source: "NASA EONET",
     category,
     title: event.title || "Unnamed natural event",
-    place: category,
+    place: null,
     observedAt: latestGeometry?.date || null,
+    firstObservedAt: geometries[0]?.date || null,
+    geometryCount: geometries.length,
     latitude: coordinates ? coordinates[1] : null,
     longitude: coordinates ? coordinates[0] : null,
-    url: event.link || "https://eonet.gsfc.nasa.gov/",
-    description: event.description || "Open event listed by NASA EONET.",
+    url: sourceLinks[0]?.url || event.link || "https://eonet.gsfc.nasa.gov/",
+    apiUrl: event.link || null,
+    sourceLinks,
+    description: event.description || null,
     magnitude: null,
+    reportedMagnitude:
+      magnitudeValue != null
+        ? { value: magnitudeValue, unit: latestGeometry.magnitudeUnit || "" }
+        : null,
   };
 }
 
@@ -76,8 +97,12 @@ function normalizeUsgsFeature(feature) {
     longitude: Number.isFinite(coordinates[0]) ? coordinates[0] : null,
     depthKm: Number.isFinite(coordinates[2]) ? coordinates[2] : null,
     magnitude: Number.isFinite(properties.mag) ? properties.mag : null,
+    magnitudeType: properties.magType || null,
+    tsunami: properties.tsunami === 1,
+    alertLevel: properties.alert || null,
+    reviewStatus: properties.status || null,
     url: properties.url || "https://earthquake.usgs.gov/earthquakes/",
-    description: properties.type || "Earthquake event",
+    description: properties.title || null,
   };
 }
 
@@ -144,7 +169,11 @@ export async function fetchSelectedLocationData({ latitude, longitude, signal })
     latitude: String(latitude),
     longitude: String(longitude),
     current:
-      "temperature_2m,relative_humidity_2m,precipitation,wind_speed_10m,weather_code",
+      "temperature_2m,apparent_temperature,relative_humidity_2m,precipitation,wind_speed_10m,wind_direction_10m,surface_pressure,cloud_cover,weather_code",
+    // Hourly model series: past 24 h (model analysis) + 48 h forecast.
+    hourly: "temperature_2m,relative_humidity_2m,precipitation,wind_speed_10m",
+    past_days: "1",
+    forecast_days: "2",
     temperature_unit: "celsius",
     wind_speed_unit: "kmh",
     precipitation_unit: "mm",
@@ -156,8 +185,10 @@ export async function fetchSelectedLocationData({ latitude, longitude, signal })
     latitude: String(latitude),
     longitude: String(longitude),
     current: "us_aqi,pm2_5,pm10,ozone,nitrogen_dioxide",
+    hourly: "us_aqi,pm2_5",
     timezone: "auto",
-    forecast_days: "1",
+    past_days: "1",
+    forecast_days: "2",
   }).toString();
 
   const inNwsBounds = isInsideLower48Bounds(latitude, longitude);
@@ -214,6 +245,9 @@ export async function fetchSelectedLocationData({ latitude, longitude, signal })
           headline: properties.headline || properties.event || "Active weather alert",
           severity: properties.severity || "Unknown",
           certainty: properties.certainty || "Unknown",
+          urgency: properties.urgency || "Unknown",
+          areaDesc: properties.areaDesc || null,
+          senderName: properties.senderName || null,
           effective: properties.effective || properties.onset || null,
           expires: properties.expires || null,
           url: properties.web || "https://www.weather.gov/alerts",

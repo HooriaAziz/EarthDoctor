@@ -1,486 +1,94 @@
-
-.ozone-monitor {
-  width: 100%;
-  margin-top: 28px;
-  color: #eaf4ff;
-}
-
-.ozone-monitor-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 24px;
-  margin-bottom: 24px;
-}
-
-.ozone-monitor-header h2 {
-  margin: 7px 0 10px;
-  color: #f1f7ff;
-  font-size: clamp(25px, 3vw, 34px);
-}
-
-.ozone-intro {
-  max-width: 720px;
-  color: #9db1c9;
-  line-height: 1.7;
-  margin: 0;
-}
-
-.ozone-nasa-label,
-.ozone-observation-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  white-space: nowrap;
-  padding: 9px 12px;
-  border: 1px solid rgba(75, 178, 255, 0.3);
-  border-radius: 8px;
-  background: rgba(36, 126, 190, 0.1);
-  color: #83caff;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-}
-
-.ozone-metrics {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
-  margin-bottom: 34px;
-}
-
-.ozone-metric {
-  display: flex;
-  align-items: center;
-  gap: 13px;
-  min-width: 0;
-  padding: 17px;
-  border: 1px solid rgba(115, 162, 206, 0.16);
-  border-radius: 12px;
-  background: rgba(12, 32, 56, 0.72);
-}
-
-.ozone-metric > svg {
-  flex-shrink: 0;
-  color: #55b9fa;
-}
-
-.ozone-metric div {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  min-width: 0;
-}
-
-.ozone-metric span {
-  color: #8fa7c1;
-  font-size: 12px;
-}
-
-.ozone-metric strong {
-  color: #e7f3ff;
-  font-size: 14px;
-  overflow-wrap: anywhere;
-}
-
-.ozone-map-section-heading {
-  display: flex;
-  justify-content: space-between;
-  align-items: end;
-  gap: 16px;
-  margin-bottom: 16px;
-}
-
-.ozone-map-section-heading h3 {
-  color: #edf6ff;
-  margin: 6px 0 0;
-  font-size: 21px;
-}
+/* NASA polar ozone maps. */
 
 .ozone-map-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 18px;
+  gap: 8px;
 }
 
-.ozone-map-card {
-  min-width: 0;
-  padding: 16px;
-  border: 1px solid rgba(115, 162, 206, 0.18);
-  border-radius: 14px;
-  background: rgba(9, 27, 49, 0.82);
-}
-
-.ozone-map-card-heading {
+.ozone-map {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 14px;
-}
-
-.ozone-map-card-heading h3 {
-  margin: 5px 0 0;
-  color: #eff7ff;
-  font-size: 18px;
-}
-
-.ozone-map-card-heading > svg {
-  color: #61bfff;
-}
-
-.ozone-region {
-  color: #8da9c4;
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.ozone-map-image-link {
-  display: block;
+  flex-direction: column;
+  min-width: 0;
+  margin: 0;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius);
+  background: var(--bg-inset);
   overflow: hidden;
-  border-radius: 10px;
-  background: #071321;
-  border: 1px solid rgba(140, 180, 220, 0.14);
 }
 
-.ozone-map-image-link img {
+.ozone-map-image {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  background: #000;
+}
+
+.ozone-map-image img {
   display: block;
   width: 100%;
-  aspect-ratio: 1 / 1;
+  height: 100%;
   object-fit: contain;
-  transition: transform 0.25s ease;
 }
 
-.ozone-map-image-link:hover img {
-  transform: scale(1.025);
-}
-
-.ozone-map-description {
-  margin: 13px 0;
-  color: #9db1c9;
-  font-size: 13px;
-  line-height: 1.6;
-}
-
-.ozone-source-link,
-.ozone-attribution a {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  color: #70c5ff;
-  font-size: 13px;
-  font-weight: 600;
-  text-decoration: none;
-}
-
-.ozone-source-link:hover,
-.ozone-attribution a:hover {
-  color: #b4e2ff;
-  text-decoration: underline;
-}
-
-.ozone-legend {
-  margin-top: 20px;
-  padding: 17px;
-  border: 1px solid rgba(115, 162, 206, 0.16);
-  border-radius: 12px;
-  background: rgba(12, 32, 56, 0.62);
-}
-
-.ozone-legend-heading,
-.ozone-legend-labels {
+.ozone-map-fallback {
   display: flex;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.ozone-legend-heading strong {
-  color: #eaf4ff;
-  font-size: 13px;
-}
-
-.ozone-legend-heading span {
-  color: #8ea7c1;
-  font-size: 12px;
-}
-
-.ozone-color-scale {
-  height: 12px;
-  margin: 15px 0 8px;
-  border-radius: 20px;
-  background: linear-gradient(
-    90deg,
-    #3522a5,
-    #1646d2,
-    #087cbd,
-    #1ba66b,
-    #d3cf36,
-    #e88927,
-    #c52b25
-  );
-}
-
-.ozone-legend-labels {
-  color: #9db1c9;
-  font-size: 11px;
-}
-
-.ozone-science-note {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  margin-top: 18px;
-  padding: 16px;
-  border: 1px solid rgba(72, 166, 227, 0.2);
-  border-radius: 10px;
-  background: rgba(20, 72, 109, 0.16);
-}
-
-.ozone-science-note > svg {
-  flex-shrink: 0;
-  margin-top: 2px;
-  color: #69c4ff;
-}
-
-.ozone-science-note p {
-  margin: 0;
-  color: #a9bfd5;
-  font-size: 13px;
-  line-height: 1.7;
-}
-
-.ozone-science-note strong {
-  color: #e5f3ff;
-}
-
-.ozone-attribution {
-  margin-top: 17px;
-  color: #849bb5;
-  font-size: 12px;
-}
-
-.ozone-attribution a {
-  margin-left: 4px;
-  font-size: 12px;
-}
-
-.outside-view-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin: 24px 0 10px;
-}
-
-.outside-view-tab {
-  padding: 11px 18px;
-  border: 1px solid rgba(115, 162, 206, 0.2);
-  border-radius: 9px;
-  background: rgba(12, 32, 56, 0.65);
-  color: #a8bdd3;
-  cursor: pointer;
-  font: inherit;
-  font-size: 14px;
-  transition: 0.2s ease;
-}
-
-.outside-view-tab:hover {
-  border-color: rgba(83, 186, 255, 0.55);
-  color: #e8f5ff;
-}
-
-.outside-view-tab.active {
-  border-color: rgba(75, 178, 255, 0.65);
-  background: rgba(38, 132, 194, 0.2);
-  color: #8bd0ff;
-}
-
-@media (max-width: 720px) {
-  .ozone-monitor-header {
-    flex-direction: column;
-  }
-
-  .ozone-metrics {
-    grid-template-columns: 1fr;
-  }
-
-  .ozone-map-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .ozone-map-section-heading {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-}
-
-@media (max-width: 420px) {
-  .ozone-legend-heading {
-    flex-direction: column;
-  }
-}
-
-.ozone-data-status {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin: -17px 0 32px;
-  padding: 12px 14px;
-  background: rgba(12, 32, 56, 0.5);
-  border: 1px solid rgba(115, 162, 206, 0.13);
-  border-radius: 9px;
-}
-
-.ozone-data-status-text {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  color: #9db1c9;
-  font-size: 12px;
-  line-height: 1.5;
-}
-
-.ozone-status-dot {
-  width: 7px;
-  height: 7px;
-  flex-shrink: 0;
-  border-radius: 50%;
-  background: #55d9bd;
-}
-
-.ozone-status-dot.checking {
-  background: #e8b96b;
-  animation: ozone-pulse 1s infinite alternate;
-}
-
-.ozone-refresh-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  padding: 8px 11px;
-  color: #8bd0ff;
-  background: rgba(38, 132, 194, 0.13);
-  border: 1px solid rgba(75, 178, 255, 0.25);
-  border-radius: 7px;
-  font-size: 11px;
-  cursor: pointer;
-}
-
-.ozone-refresh-button:disabled {
-  opacity: 0.55;
-  cursor: wait;
-}
-
-.ozone-refresh-button:hover:not(:disabled) {
-  background: rgba(38, 132, 194, 0.25);
-}
-
-.ozone-spinning {
-  animation: ozone-spin 1s linear infinite;
-}
-
-.ozone-map-image-fallback {
-  display: flex;
-  min-height: 260px;
-  padding: 24px;
-  align-items: center;
-  justify-content: center;
   flex-direction: column;
-  gap: 10px;
-  color: #9db1c9;
+  gap: 4px;
+  padding: 12px;
+  color: var(--text-2);
+  font-size: var(--fs-12);
   text-align: center;
-  font-size: 13px;
-  line-height: 1.6;
 }
 
-.ozone-map-image-fallback span {
-  color: #70c5ff;
+.ozone-map-fallback span {
+  color: var(--blue-bright);
+  font-size: var(--fs-11);
 }
 
-.ozone-legend-note {
-  margin: 12px 0 0;
-  color: #849bb5;
-  font-size: 11px;
-  line-height: 1.5;
-}
-
-.ozone-global-viewer {
+.ozone-map figcaption {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 18px;
-  margin-top: 20px;
-  padding: 18px;
-  border: 1px solid rgba(75, 178, 255, 0.2);
-  border-radius: 12px;
-  background: rgba(12, 32, 56, 0.65);
+  align-items: baseline;
+  gap: 6px;
+  padding: 5px 8px;
+  border-top: 1px solid var(--border-subtle);
+  font-size: var(--fs-11);
 }
 
-.ozone-global-viewer > div {
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-}
-
-.ozone-global-viewer strong {
-  color: #eaf4ff;
-  font-size: 14px;
-}
-
-.ozone-global-viewer p {
-  margin: 0;
-  color: #9db1c9;
-  font-size: 12px;
-  line-height: 1.6;
-}
-
-.ozone-global-viewer-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  padding: 9px 12px;
-  color: #70c5ff;
-  background: rgba(38, 132, 194, 0.13);
-  border: 1px solid rgba(75, 178, 255, 0.25);
-  border-radius: 8px;
-  text-decoration: none;
-  font-size: 12px;
+.ozone-map figcaption strong {
+  white-space: nowrap;
+  color: var(--text-1);
+  font-size: var(--fs-12);
   font-weight: 600;
+}
+
+.ozone-map figcaption span {
+  overflow: hidden;
+  color: var(--text-3);
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.ozone-global-viewer-link:hover {
-  color: #b4e2ff;
-  background: rgba(38, 132, 194, 0.25);
+.ozone-map figcaption a {
+  margin-left: auto;
+  white-space: nowrap;
 }
 
-@keyframes ozone-spin {
-  to {
-    transform: rotate(360deg);
-  }
+.ozone-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
 }
 
-@keyframes ozone-pulse {
-  from {
-    opacity: 0.45;
-  }
-
-  to {
-    opacity: 1;
-  }
+.ozone-color-scale {
+  height: 6px;
+  border-radius: 1px;
+  background: linear-gradient(90deg, #3522a5, #1646d2, #087cbd, #1ba66b, #d3cf36, #e88927, #c52b25);
 }
 
-@media (max-width: 520px) {
-  .ozone-data-status {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .ozone-global-viewer {
-    align-items: flex-start;
-    flex-direction: column;
-  }
+.ozone-legend-labels {
+  display: flex;
+  justify-content: space-between;
+  color: var(--text-3);
+  font-size: var(--fs-11);
 }

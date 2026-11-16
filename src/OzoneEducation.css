@@ -1,112 +1,135 @@
+/* Background/education content — shared layout (also used by orbital). */
 
-.ozone-education .earthdoc-education-kicker {
-  color: var(--ozone-accent, #9d9af5);
+.earthdoc-education {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 12px 12px;
 }
 
-.ozone-education-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.85rem;
-  margin: 1.35rem 0;
+.earthdoc-education-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
 }
 
-.ozone-education-grid article {
-  padding: 1.05rem;
-  background: var(--card-bg, rgba(148, 163, 184, 0.07));
-  border: 1px solid var(--panel-border, rgba(148, 163, 184, 0.16));
-  border-radius: 13px;
-}
-
-.ozone-education-grid article > svg,
-.ozone-education-bottom > svg {
-  color: var(--ozone-accent, #9d9af5);
-}
-
-.ozone-education-grid h3,
-.ozone-education-callout h3,
-.ozone-education-bottom h3 {
-  margin: 0.8rem 0 0.45rem;
-  font-size: 0.98rem;
-  line-height: 1.4;
-}
-
-.ozone-education-grid p,
-.ozone-education-callout p,
-.ozone-education-bottom p {
-  margin: 0;
-  color: var(--text-secondary, #b8c5d3);
-  font-size: 0.9rem;
-  line-height: 1.7;
-}
-
-.ozone-education-callout {
-  padding: 1.1rem 1.2rem;
-  background: rgba(157, 154, 245, 0.08);
-  border: 1px solid rgba(157, 154, 245, 0.23);
-  border-left: 3px solid var(--ozone-accent, #9d9af5);
-  border-radius: 12px;
-}
-
-.ozone-education-callout h3 {
-  margin-top: 0;
-}
-
-.ozone-education-bottom {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 0.9rem;
-  margin-top: 0.9rem;
-  padding: 1.1rem;
-  border: 1px solid var(--panel-border, rgba(148, 163, 184, 0.16));
-  border-radius: 13px;
-}
-
-.ozone-education-bottom h3 {
-  margin-top: 0;
-}
-
-.ozone-education-bottom a {
+.earthdoc-education-kicker {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  color: var(--ozone-accent, #9d9af5);
-  font-size: 0.82rem;
-  font-weight: 700;
-  text-decoration: none;
+  gap: 6px;
+  color: var(--text-3);
+  font-size: var(--fs-11);
 }
 
-.ozone-education-bottom a:hover {
-  text-decoration: underline;
+.earthdoc-education-kicker svg {
+  width: 12px;
+  height: 12px;
+  color: var(--blue-bright);
 }
 
-.ozone-education .earthdoc-education-footnote {
-  margin: 0.9rem 0 0;
-  color: var(--text-muted, #91a0b1);
-  font-size: 0.76rem;
+.earthdoc-education h2 {
+  font-size: var(--fs-16);
+  font-weight: 600;
+}
+
+.earthdoc-education h3 {
+  font-size: var(--fs-13);
+  font-weight: 600;
+}
+
+.earthdoc-education p {
+  color: var(--text-2);
+  font-size: var(--fs-12);
   line-height: 1.6;
 }
 
-@media (max-width: 760px) {
-  .ozone-education-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .ozone-education-bottom {
-    grid-template-columns: auto minmax(0, 1fr);
-  }
-
-  .ozone-education-bottom a {
-    grid-column: 2;
-  }
+.earthdoc-education-lead {
+  max-width: 100ch;
 }
 
-@media (max-width: 460px) {
-  .ozone-education-bottom {
-    grid-template-columns: 1fr;
+.ozone-education-grid,
+.orbital-education-facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.ozone-education-grid article,
+.orbital-education-facts article {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 9px 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius);
+  background: var(--bg-inset);
+}
+
+.ozone-education-grid article > svg {
+  width: 15px;
+  height: 15px;
+  color: var(--blue-bright);
+}
+
+.ozone-education-callout,
+.earthdoc-education-story {
+  padding: 9px 10px;
+  border: 1px solid var(--border-subtle);
+  border-left: 2px solid var(--green-bright);
+  border-radius: var(--radius);
+  background: var(--bg-inset);
+}
+
+.ozone-education-callout p {
+  margin-top: 3px;
+}
+
+.ozone-education-bottom,
+.orbital-education-bottom {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 9px 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius);
+}
+
+.ozone-education-bottom > svg,
+.orbital-education-bottom > svg {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  color: var(--green-bright);
+}
+
+.ozone-education-bottom > div,
+.orbital-education-bottom > div {
+  flex: 1;
+}
+
+.ozone-education-bottom a,
+.orbital-education-bottom a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  font-size: var(--fs-12);
+  white-space: nowrap;
+}
+
+.earthdoc-education-footnote {
+  color: var(--text-3) !important;
+  font-size: var(--fs-11) !important;
+}
+
+@media (max-width: 899px) {
+  .ozone-education-grid,
+  .orbital-education-facts {
+    grid-template-columns: minmax(0, 1fr);
   }
 
-  .ozone-education-bottom a {
-    grid-column: 1;
+  .ozone-education-bottom,
+  .orbital-education-bottom {
+    flex-wrap: wrap;
   }
 }

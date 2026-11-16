@@ -174,7 +174,7 @@ export default function TrendAnalysisPanel({
           <h3>{title}</h3>
           {description && <p>{description}</p>}
         </div>
-        <span className={`trend-direction-pill ${result.direction}`}>
+        <span className={`trend-direction-pill ${result.isSignificant ? result.direction : ""}`}>
           {result.isSignificant ? result.direction : "no significant trend"}
         </span>
       </div>
