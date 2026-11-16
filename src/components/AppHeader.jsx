@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Globe2, Orbit } from "lucide-react";
+import { Globe2, Orbit, TrendingUp } from "lucide-react";
 import { statusMeta } from "../lib/status";
 
 function UtcClock() {
@@ -41,6 +41,7 @@ function SourceChip({ label, status, detail }) {
 const SECTIONS = [
   { id: "inside", label: "Inside Earth", Icon: Globe2 },
   { id: "outside", label: "Around Earth", Icon: Orbit },
+  { id: "trends", label: "Global trends", Icon: TrendingUp },
 ];
 
 export default function AppHeader({ section, onSectionChange, search, sources }) {

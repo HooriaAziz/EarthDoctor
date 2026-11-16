@@ -6,7 +6,9 @@ import GlobeWorkspace from "./components/GlobeWorkspace";
 import LocationPanel from "./components/LocationPanel";
 import AlertsPanel from "./components/AlertsPanel";
 import EventSummary from "./components/EventSummary";
-import ForecastCharts from "./components/ForecastCharts";
+import LocationAnalytics from "./components/LocationAnalytics";
+import SeismicityPanel from "./components/SeismicityPanel";
+import GlobalTrends from "./components/GlobalTrends";
 import EventExplorer from "./components/EventExplorer";
 import SourcesPanel from "./components/SourcesPanel";
 import AroundEarth from "./components/AroundEarth";
@@ -67,6 +69,21 @@ function App() {
       const event = eventsData.events.find((item) => item.id === eventId);
       if (event && isNum(event.latitude) && isNum(event.longitude)) {
         issueCommand({ type: "focus", latitude: event.latitude, longitude: event.longitude, height: 2_400_000 });
+      }
+    },
+    [eventsData.events, issueCommand]
+  );
+
+  // Events from the 30-day seismicity feed may be older than the live
+  // 24-hour feed shown on the globe; focus the camera either way.
+  const handleSeismicSelect = useCallback(
+    (event) => {
+      if (!event) return;
+      if (eventsData.events.some((item) => item.id === event.id)) setSelectedEventId(event.id);
+      if (isNum(event.latitude) && isNum(event.longitude)) {
+        issueCommand({ type: "focus", latitude: event.latitude, longitude: event.longitude, height: 2_400_000 });
+        const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+        document.getElementById("globe-title")?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
       }
     },
     [eventsData.events, issueCommand]
@@ -155,7 +172,7 @@ function App() {
               </div>
             </div>
 
-            <ForecastCharts location={selectedLocation} state={locationState} />
+            <LocationAnalytics location={selectedLocation} state={locationState} />
 
             {selectedLocation?.name && <CountryEmissionsProfile country={selectedLocation} />}
 
@@ -166,17 +183,23 @@ function App() {
               onSelectEvent={handleSelectEvent}
             />
 
+            <SeismicityPanel onSelectEvent={handleSeismicSelect} />
+
             <SourcesPanel eventStatus={eventsData.sourceStatus} locationStatus={pointSources} hasPoint={hasPoint} />
         </div>
 
         {section === "outside" && <AroundEarth />}
+
+        {section === "trends" && <GlobalTrends onSelectCountry={handleSearchSelect} />}
 
         <footer className="app-footer">
           <span>Earth Doctor</span>
           <span>
             {section === "inside"
               ? "Weather and air quality are model estimates, not station observations. Event times are as reported by each source."
-              : "Ozone maps are NASA satellite products. 3D models are illustrative; statistics cite their source snapshots."}
+              : section === "trends"
+                ? "Climate indicators load live from NOAA; emissions are the bundled EDGAR 2026 inventory. Computed statistics are labelled."
+                : "Ozone maps are NASA satellite products. 3D models are illustrative; statistics cite their source snapshots."}
           </span>
         </footer>
       </main>

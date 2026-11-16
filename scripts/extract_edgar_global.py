@@ -1,0 +1,153 @@
+"""Generate src/assets/edgarGlobalData.js from the bundled EDGAR 2026 workbook.
+
+Usage (from the repo root):
+    python scripts/extract_edgar_global.py
+
+Only the Python standard library is used. Every number written to the output
+is copied (or summed, where stated) from the workbook; nothing is estimated.
+"""
+import json
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(__file__))
+from xlsx_read import rows  # noqa: E402
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+XLSX = os.path.join(ROOT, "src", "assets", "edgar-ghg-2026.xlsx")
+OUT = os.path.join(ROOT, "src", "assets", "edgarGlobalData.js")
+
+GAS_LABELS = {
+    "CO2": "CO₂",
+    "GWP_100_AR5_CH4": "CH₄",
+    "GWP_100_AR5_N2O": "N₂O",
+    "GWP_100_AR5_F-gases": "F-gases",
+}
+
+
+def year_columns(header, first_data_col):
+    years = []
+    for value in header[first_data_col:]:
+        if isinstance(value, float):
+            years.append(int(value))
+    return years
+
+
+def series(row, start, count):
+    out = []
+    for value in row[start:start + count]:
+        out.append(round(value, 3) if isinstance(value, float) else None)
+    while len(out) < count:
+        out.append(None)
+    return out
+
+
+def main():
+    sys.stdout.reconfigure(encoding="utf-8")
+    # ---- Totals (Mt CO2e) --------------------------------------------------
+    totals = list(rows(XLSX, "GHG_totals_by_country"))
+    years = year_columns(totals[0], 2)
+    n = len(years)
+    by_code = {r[0]: r for r in totals[1:] if r and r[0]}
+
+    aggregates = {
+        "global": series(by_code["GLOBAL TOTAL"], 2, n),
+        "aviation": series(by_code["AIR"], 2, n),
+        "shipping": series(by_code["SEA"], 2, n),
+        "eu27": series(by_code["EU27"], 2, n),
+    }
+
+    # ---- Per capita (t CO2e / person) --------------------------------------
+    per_cap_rows = list(rows(XLSX, "GHG_per_capita_by_country"))
+    pc_years = year_columns(per_cap_rows[0], 2)
+    per_cap = {r[0]: series(r, 2, len(pc_years)) for r in per_cap_rows[1:] if r and r[0]}
+
+    # ---- Per GDP (t CO2e / kUSD), starts 1990 ------------------------------
+    per_gdp_rows = list(rows(XLSX, "GHG_per_GDP_by_country"))
+    gdp_years = year_columns(per_gdp_rows[0], 2)
+    per_gdp = {r[0]: series(r, 2, len(gdp_years)) for r in per_gdp_rows[1:] if r and r[0]}
+
+    # ---- Sector x gas, GLOBAL TOTAL rows -----------------------------------
+    sector_rows = list(rows(XLSX, "GHG_by_sector_and_country"))
+    s_years = year_columns(sector_rows[0], 4)
+    assert s_years == years, "sector sheet years differ from totals"
+
+    by_sector = {}
+    by_gas = {}
+    for r in sector_rows[1:]:
+        if not r or r[2] != "GLOBAL TOTAL":
+            continue
+        gas = GAS_LABELS.get(r[0], r[0])
+        sector = r[1]
+        values = series(r, 4, n)
+        for bucket, key in ((by_sector, sector), (by_gas, gas)):
+            acc = bucket.setdefault(key, [0.0] * n)
+            for i, v in enumerate(values):
+                if v is not None:
+                    acc[i] = round(acc[i] + v, 3)
+
+    # ---- LULUCF (Mt CO2e), macro-regions, starts 1990 ----------------------
+    lul_rows = list(rows(XLSX, "LULUCF_macroregions"))
+    l_years = year_columns(lul_rows[0], 3)
+    ln = len(l_years)
+    lulucf_net_by_region = {}
+    lulucf_global_components = {}
+    lulucf_global_net = None
+    for r in lul_rows[1:]:
+        if not r:
+            continue
+        substance, sector, region = r[0], r[1], r[2]
+        values = series(r, 3, ln)
+        if region == "Net" and substance == "GWP_100_AR5_GHG":
+            lulucf_net_by_region[sector] = values  # sector column holds region name
+        elif region == "GLOBAL TOTAL" and sector == "Net":
+            lulucf_global_net = values
+        elif region == "GLOBAL TOTAL":
+            acc = lulucf_global_components.setdefault(sector, [0.0] * ln)
+            for i, v in enumerate(values):
+                if v is not None:
+                    acc[i] = round(acc[i] + v, 3)
+
+    # ---- Country per-capita series (for country profiles) ------------------
+    country_codes = [r[0] for r in totals[1:] if r and r[0] and len(str(r[0])) == 3 and r[0] not in ("AIR", "SEA")]
+    country_per_capita = {code: per_cap[code] for code in country_codes if code in per_cap}
+
+    data = {
+        "years": years,
+        "totalMt": aggregates["global"],
+        "aviationMt": aggregates["aviation"],
+        "shippingMt": aggregates["shipping"],
+        "eu27Mt": aggregates["eu27"],
+        "perCapitaT": per_cap["GLOBAL TOTAL"],
+        "perGdp": {"years": gdp_years, "values": per_gdp["GLOBAL TOTAL"]},
+        "bySectorMt": by_sector,
+        "byGasMt": by_gas,
+        "lulucf": {
+            "years": l_years,
+            "netMt": lulucf_global_net,
+            "componentsMt": lulucf_global_components,
+            "netByRegionMt": lulucf_net_by_region,
+        },
+    }
+
+    header = (
+        "// GENERATED by scripts/extract_edgar_global.py from edgar-ghg-2026.xlsx.\n"
+        "// Do not edit by hand. Units: Mt CO2e/yr (GWP-100 AR5) unless noted.\n"
+        "// Sector and gas series are the workbook's GLOBAL TOTAL rows summed per\n"
+        "// sector (across gases) or per gas (across sectors).\n"
+    )
+    with open(OUT, "w", encoding="utf-8") as fh:
+        fh.write(header)
+        fh.write("export const EDGAR_GLOBAL = ")
+        fh.write(json.dumps(data, ensure_ascii=False, separators=(",", ":")))
+        fh.write(";\n\n// Per-capita GHG (t CO2e / person / yr) by EDGAR country code, 1970–2025.\n")
+        fh.write("export const EDGAR_COUNTRY_PER_CAPITA = ")
+        fh.write(json.dumps(country_per_capita, separators=(",", ":")))
+        fh.write(";\n")
+
+    print(f"wrote {OUT} ({os.path.getsize(OUT) // 1024} KB); sectors={list(by_sector)}; gases={list(by_gas)}")
+    print("check 2025: global", aggregates["global"][-1], "sum sectors", round(sum(v[-1] for v in by_sector.values()), 1))
+
+
+if __name__ == "__main__":
+    main()

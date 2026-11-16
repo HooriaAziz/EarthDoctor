@@ -82,3 +82,12 @@ export function cardinal(degrees) {
     "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"];
   return points[Math.round((((degrees % 360) + 360) % 360) / 22.5) % 16];
 }
+
+export function compactNumber(value, digits = 1) {
+  if (!isNum(value)) return "—";
+  const abs = Math.abs(value);
+  if (abs >= 1e9) return `${(value / 1e9).toFixed(digits)}B`;
+  if (abs >= 1e6) return `${(value / 1e6).toFixed(digits)}M`;
+  if (abs >= 1e4) return `${(value / 1e3).toFixed(abs >= 1e5 ? 0 : digits)}k`;
+  return value.toLocaleString("en-US", { maximumFractionDigits: digits });
+}

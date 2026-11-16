@@ -6,6 +6,7 @@ import OzoneLayerMonitor from "../OzoneLayerMonitor";
 import OrbitalDebrisMonitor from "../OrbitalDebrisMonitor";
 import OzoneEducation from "../OzoneEducation";
 import OrbitalDebrisEducation from "../OrbitalDebrisEducation";
+import SpaceWeatherPanel from "./SpaceWeatherPanel";
 
 const VIEWS = [
   { id: "atmosphere", label: "Atmosphere · ozone" },
@@ -23,7 +24,7 @@ export default function AroundEarth() {
           <p className="page-context">
             {view === "atmosphere"
               ? "Stratospheric ozone from NASA Ozone Watch: daily ozone-hole area, polar maps and the 1979–2025 annual record."
-              : "Catalogued objects and debris in Earth orbit from ESA statistics and a CelesTrak-based historical reconstruction."}
+              : "Catalogued objects and debris in Earth orbit (ESA, CelesTrak) and live NOAA space weather that drives orbital drag."}
           </p>
         </div>
         <div className="segmented" role="tablist" aria-label="Around Earth views">
@@ -55,6 +56,7 @@ export default function AroundEarth() {
       ) : (
         <>
           <OrbitalDebrisMonitor visual={<OrbitalDebrisSimulation key="debris" />} />
+          <SpaceWeatherPanel />
           <details className="panel background-details">
             <summary>
               <BookOpen size={14} aria-hidden="true" /> Background: why orbital debris matters

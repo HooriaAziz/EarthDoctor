@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { LineChart } from "lucide-react";
-import { Panel, EmptyState } from "./ui";
+import { EmptyState } from "./ui";
 import TimeSeriesChart from "./TimeSeriesChart";
 import { fmtNum, isNum } from "../lib/format";
 
@@ -44,7 +44,7 @@ function ChartCell({ title, series, unit, digits, nowValue, children }) {
   );
 }
 
-export default function ForecastCharts({ location, state }) {
+export default function HourlyCharts({ location, state }) {
   const [range, setRange] = useState("all");
 
   const weather = state.data?.weather;
@@ -69,17 +69,14 @@ export default function ForecastCharts({ location, state }) {
   const hasPoint = isNum(location?.latitude) && isNum(location?.longitude);
 
   return (
-    <Panel
-      id="trends"
-      className="trends-panel"
-      title="Hourly trends"
-      meta={
-        hasAny
-          ? `Open-Meteo · CAMS · local time ${tz}${tzName ? ` (${tzName})` : ""} · shaded = forecast`
-          : "Model series for the selected point"
-      }
-      actions={
-        hasAny && (
+    <>
+      <div className="tab-toolbar">
+        <span className="panel-meta">
+          {hasAny
+            ? `Open-Meteo · CAMS · local time ${tz}${tzName ? ` (${tzName})` : ""} · shaded = forecast`
+            : "Model series for the selected point"}
+        </span>
+        {hasAny && (
           <div className="segmented" role="radiogroup" aria-label="Time range">
             {RANGES.map((item) => (
               <button
@@ -94,9 +91,8 @@ export default function ForecastCharts({ location, state }) {
               </button>
             ))}
           </div>
-        )
-      }
-    >
+        )}
+      </div>
       {!hasPoint ? (
         <EmptyState icon={LineChart} title="No series loaded">
           Select a point on the globe to load the hourly model series (past 24 h analysis and 48 h
@@ -137,6 +133,6 @@ export default function ForecastCharts({ location, state }) {
           </ChartCell>
         </div>
       )}
-    </Panel>
+    </>
   );
 }

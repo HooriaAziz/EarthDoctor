@@ -1,6 +1,8 @@
 
 import "./CountryEmissionsProfile.css";
 import { getEdgarCountryProfile } from "./assets/edgarData";
+import { EDGAR_COUNTRY_PER_CAPITA, EDGAR_GLOBAL } from "./assets/edgarGlobalData";
+import XYChart from "./components/XYChart";
 
 function getCountryLabel(country) {
   if (typeof country === "string") return country;
@@ -531,6 +533,47 @@ export default function CountryEmissionsProfile({ country }) {
           )}
         </article>
       </div>
+
+      {/* Per-capita comparison with the world average */}
+      {EDGAR_COUNTRY_PER_CAPITA[profile.code] && (
+        <div className="edgar-detail-grid edgar-detail-single">
+          <article className="edgar-detail-card">
+            <div className="edgar-card-heading">
+              <div>
+                <h3>Per-person emissions vs world average</h3>
+                <p>t CO₂e per person per year · 1970–2025</p>
+              </div>
+              <span className="edgar-unit-tag">t CO₂e</span>
+            </div>
+            <XYChart
+              x={EDGAR_GLOBAL.years}
+              series={[
+                {
+                  id: "country",
+                  label: profile.name,
+                  type: "line",
+                  color: "#398CF0",
+                  width: 2,
+                  values: EDGAR_COUNTRY_PER_CAPITA[profile.code],
+                },
+                {
+                  id: "world",
+                  label: "World",
+                  type: "line",
+                  color: "#A1B0C2",
+                  dash: true,
+                  values: EDGAR_GLOBAL.perCapitaT,
+                },
+              ]}
+              height={170}
+              unit="t"
+              zeroBased
+              formatY={(v, tip) => formatNumber(v, tip ? 2 : 0)}
+              ariaLabel={`${profile.name} greenhouse-gas emissions per person compared with the world average, 1970 to 2025`}
+            />
+          </article>
+        </div>
+      )}
 
       {/* Scientific scope and attribution */}
       <div className="edgar-profile-footnote">

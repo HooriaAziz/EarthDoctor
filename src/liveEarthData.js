@@ -80,7 +80,7 @@ function normalizeEonetEvent(event) {
   };
 }
 
-function normalizeUsgsFeature(feature) {
+export function normalizeUsgsFeature(feature) {
   const properties = feature.properties || {};
   const coordinates = feature.geometry?.coordinates || [];
 
