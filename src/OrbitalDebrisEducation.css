@@ -1,0 +1,142 @@
+
+.earthdoc-education {
+  width: 100%;
+  margin: 1.5rem 0;
+  padding: clamp(1.15rem, 2.5vw, 1.8rem);
+  color: var(--text-primary, #e8eef5);
+  background: var(--panel-bg, rgba(12, 24, 39, 0.78));
+  border: 1px solid var(--panel-border, rgba(148, 163, 184, 0.2));
+  border-radius: 18px;
+  box-sizing: border-box;
+}
+
+.earthdoc-education-heading {
+  max-width: 820px;
+}
+
+.earthdoc-education-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--accent, #65c9d6);
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.11em;
+}
+
+.earthdoc-education-heading h2 {
+  margin: 0.7rem 0 0.55rem;
+  font-size: clamp(1.35rem, 2.5vw, 1.9rem);
+  line-height: 1.2;
+}
+
+.earthdoc-education-lead {
+  margin: 0;
+  color: var(--text-secondary, #b8c5d3);
+  line-height: 1.7;
+}
+
+.orbital-education-facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.85rem;
+  margin: 1.35rem 0;
+}
+
+.orbital-education-facts article {
+  padding: 1rem;
+  background: var(--card-bg, rgba(148, 163, 184, 0.07));
+  border: 1px solid var(--panel-border, rgba(148, 163, 184, 0.16));
+  border-radius: 13px;
+}
+
+.orbital-education-facts strong {
+  color: var(--accent, #65c9d6);
+  font-size: 1.45rem;
+}
+
+.orbital-education-facts h3,
+.earthdoc-education-story h3,
+.orbital-education-bottom h3 {
+  margin: 0.45rem 0;
+  font-size: 0.98rem;
+}
+
+.orbital-education-facts p,
+.earthdoc-education-story p,
+.orbital-education-bottom p {
+  color: var(--text-secondary, #b8c5d3);
+  font-size: 0.9rem;
+  line-height: 1.7;
+}
+
+.earthdoc-education-story {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.9rem;
+  padding: 1.1rem;
+  background: var(--card-bg, rgba(148, 163, 184, 0.06));
+  border-radius: 13px;
+}
+
+.earthdoc-education-story > svg,
+.orbital-education-bottom > svg {
+  color: var(--accent, #65c9d6);
+  flex-shrink: 0;
+}
+
+.earthdoc-education-story p + p {
+  margin-top: 0.7rem;
+}
+
+.orbital-education-bottom {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.9rem;
+  margin-top: 0.9rem;
+  padding: 1.1rem;
+  border: 1px solid var(--panel-border, rgba(148, 163, 184, 0.16));
+  border-radius: 13px;
+}
+
+.orbital-education-bottom a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--accent, #65c9d6);
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.orbital-education-bottom a:hover {
+  text-decoration: underline;
+}
+
+.earthdoc-education-footnote {
+  margin: 0.9rem 0 0;
+  color: var(--text-muted, #91a0b1);
+  font-size: 0.76rem;
+  line-height: 1.6;
+}
+
+@media (max-width: 760px) {
+  .orbital-education-facts {
+    grid-template-columns: 1fr;
+  }
+
+  .orbital-education-bottom {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .orbital-education-bottom a {
+    grid-column: 2;
+  }
+}
+
+@media (max-width: 460px) {
+  .earthdoc-education-story {
+    grid-template-columns: 1fr;
+  }
+}

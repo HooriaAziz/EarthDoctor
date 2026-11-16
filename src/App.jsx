@@ -1,12 +1,10 @@
 import { useEffect, useState } from "react";
 import {
   Activity,
-  Bot,
   Droplets,
   Globe2,
   Leaf,
   Wind,
-  TrendingUp,
   Sun,
   Thermometer,
   Waves,
@@ -14,7 +12,8 @@ import {
   X,
   Satellite,
 } from "lucide-react";
-
+import OrbitalDebrisEducation from "./OrbitalDebrisEducation.jsx";
+import OzoneEducation from "./OzoneEducation.jsx";
 import CesiumGlobe from "./CesiumGlobe";
 import LiveEventsPanel from "./LiveEventsPanel";
 import CountryEmissionsProfile from "./CountryEmissionsProfile";
@@ -903,40 +902,7 @@ function App() {
               />
             </div>
 
-            <section className="summary-section" id="summary">
-              <div className="summary-icon">
-                <Activity size={25} />
-              </div>
-
-              <div className="summary-content">
-                <p className="eyebrow">PLANETARY OVERVIEW</p>
-                <h2>Earth Health Summary</h2>
-
-                <p>
-                  Live event locations are currently supplied by NASA
-                  EONET and USGS. Selecting a point loads model-based
-                  weather and air-quality estimates, plus U.S.
-                  National Weather Service alerts where available.
-                  Evidence-based environmental scoring and AI
-                  interpretation will be added only after their
-                  underlying data and methodology are connected.
-                </p>
-
-                <div className="summary-footer">
-                  <span>
-                    <Leaf size={15} /> Source-linked information
-                  </span>
-
-                  <span>
-                    <TrendingUp size={15} /> Historical comparisons next
-                  </span>
-
-                  <span>
-                    <Bot size={15} /> AI-assisted explanations next
-                  </span>
-                </div>
-              </div>
-            </section>
+            
           </>
         )}
 
@@ -1000,11 +966,14 @@ function App() {
             </div>
 
             {activeOutsideView === "atmosphere" ? (
-              <>
-  <OrbitalDebrisSimulation mode="ozone" />
-  <OzoneLayerMonitor />
-</>
-            ) : (
+  <>
+    <OrbitalDebrisSimulation mode="ozone" />
+    <OzoneLayerMonitor />
+
+    {/* Educational information about the ozone layer */}
+    <OzoneEducation />
+  </>
+) : (
               <>
                 <section className="orbital-section-heading">
                   <div>
@@ -1021,6 +990,7 @@ function App() {
 
                 <OrbitalDebrisSimulation />
                 <OrbitalDebrisMonitor />
+                <OrbitalDebrisEducation />
               </>
             )}
           </>
