@@ -778,7 +778,7 @@
   position: relative;
   flex: 1;
   min-height: 360px;
-  background: #05080d;
+  background: #02050a;
 }
 
 .cesium-map {
@@ -2847,4 +2847,144 @@
   .post-grid {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+
+/* =========================================================
+   FINAL DARK BLUE-BLACK SURFACE OVERRIDES
+   Preserve chart, text, line and status colors.
+   ========================================================= */
+
+.app,
+.workspace,
+.section-body {
+  background: var(--bg-app);
+}
+
+.app-header {
+  background: #050a12;
+  border-bottom-color: var(--border-subtle);
+}
+
+.panel,
+.chart-cell,
+.post-card,
+.action-list li,
+.alert-row,
+.kpi,
+.metric-grid,
+.quake-list {
+  background-color: var(--bg-panel);
+}
+
+.panel-head,
+.layer-strip,
+.panel-tabs {
+  background-color: var(--bg-panel);
+}
+
+.event-detail,
+.globe-readout,
+.globe-hint,
+.globe-callout {
+  background-color: rgba(5, 10, 18, 0.94);
+}
+
+.search-results {
+  background: var(--bg-elevated);
+}
+
+.search-input,
+.field input,
+.field select,
+.segmented {
+  background-color: var(--bg-inset);
+}
+
+.btn,
+.icon-btn,
+.tool-btn {
+  background-color: var(--bg-panel-2);
+}
+
+.kpi,
+.metric,
+.chart-cell {
+  border-color: var(--border-subtle);
+}
+
+.panel,
+.badge,
+.tag,
+.btn,
+.icon-btn {
+  border-color: var(--border);
+}
+
+/* ---------- Around Earth view switcher ---------- */
+
+.page-head {
+  align-items: center;
+  gap: 12px;
+}
+
+.page-head > div:last-child.segmented {
+  flex-shrink: 0;
+  margin-left: 0;
+  padding: 4px;
+  gap: 4px;
+  border-color: var(--border-strong);
+  background: var(--bg-panel);
+}
+
+.page-head > div:last-child.segmented button {
+  min-height: 34px;
+  padding: 0 14px;
+  font-size: var(--fs-13);
+}
+
+.page-head > div:last-child.segmented button.is-active {
+  background: var(--blue-surface);
+  color: var(--text-1);
+  box-shadow: inset 0 0 0 1px var(--blue-bright);
+}
+
+@media (max-width: 767px) {
+  .page-head > div:last-child.segmented {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .page-head > div:last-child.segmented button {
+    flex: 1;
+    white-space: normal;
+  }
+}
+.around-earth-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  width: fit-content;
+  margin: 16px 0;
+  padding: 4px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--bg-panel);
+}
+
+.around-earth-tabs button {
+  min-height: 36px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-2);
+  font-size: var(--fs-13);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.around-earth-tabs button.is-active {
+  background: var(--blue-surface);
+  color: var(--text-1);
+  box-shadow: inset 0 0 0 1px var(--blue-bright);
 }

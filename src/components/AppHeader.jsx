@@ -49,10 +49,10 @@ export default function AppHeader({ section, onSectionChange, search, sources })
     <header className="app-header">
       <a className="brand" href="#top" aria-label="Earth Doctor home">
         <svg className="brand-mark" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
-          <circle cx="12" cy="12" r="10" fill="none" stroke="#398CF0" strokeWidth="1.6" />
-          <ellipse cx="12" cy="12" rx="4.2" ry="10" fill="none" stroke="#398CF0" strokeWidth="1.2" />
-          <path d="M2.5 9h19M2.5 15h19" stroke="#13B981" strokeWidth="1.2" />
-          <circle cx="17.5" cy="6.5" r="2.2" fill="#E54858" />
+          <circle cx="12" cy="12" r="10" fill="none" stroke="#4668b8" strokeWidth="1.6" />
+          <ellipse cx="12" cy="12" rx="4.2" ry="10" fill="none" stroke="#4668b8" strokeWidth="1.2" />
+          <path d="M2.5 9h19M2.5 15h19" stroke="#3fb68b" strokeWidth="1.2" />
+          <circle cx="17.5" cy="6.5" r="2.2" fill="#e0606f" />
         </svg>
         <span className="brand-text">
           <strong>Earth Doctor</strong>

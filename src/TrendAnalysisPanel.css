@@ -52,9 +52,9 @@
 /* Direction is neutral information, not good/bad: blue, labelled. */
 .trend-direction-pill.increasing,
 .trend-direction-pill.decreasing {
-  border-color: rgba(57, 140, 240, 0.5);
+  border-color: rgba(70, 104, 184, 0.6);
   background: var(--blue-surface);
-  color: #a9cdfa;
+  color: #dfe5f2;
 }
 
 .trend-direction-pill.increasing::before {

@@ -133,17 +133,17 @@ function App() {
         <div className="section-body" hidden={section !== "inside"}>
             <div className="page-head">
               <div>
-                <h1>Surface environment monitor</h1>
+                <h1>What's happening on Earth right now?</h1>
                 <p className="page-context">
                   {selectedLocation ? (
                     <>
-                      Selected: <strong>{selectedLocation.name || "Unnamed area"}</strong>
+                      You picked: <strong>{selectedLocation.name || "Unnamed area"}</strong>
                       {hasPoint && (
                         <span className="mono"> · {fmtCoord(selectedLocation.latitude, selectedLocation.longitude, 3)}</span>
                       )}
                     </>
                   ) : (
-                    "Global natural events, earthquakes and point conditions from public scientific feeds."
+                    "Tap the globe to explore storms, wildfires, volcanoes and earthquakes happening around the world today."
                   )}
                 </p>
               </div>
@@ -203,10 +203,10 @@ function App() {
           <span>Earth Doctor</span>
           <span>
             {section === "inside"
-              ? "Weather and air quality are model estimates, not station observations. Event times are as reported by each source."
+              ? "Weather and air quality are computer-model estimates. Event times come from each science agency that reports them."
               : section === "trends"
-                ? "Climate indicators load live from NOAA; emissions are the bundled EDGAR 2026 inventory. Computed statistics are labelled."
-                : "Ozone maps are NASA satellite products. 3D models are illustrative; statistics cite their source snapshots."}
+                ? "Climate numbers come live from NOAA. Country pollution numbers come from the EDGAR 2026 database."
+                : "Ozone maps are pictures taken by NASA satellites. The 3D models are for learning, not exact measurements."}
           </span>
         </footer>
       </main>

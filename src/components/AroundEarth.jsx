@@ -18,7 +18,7 @@ export default function AroundEarth() {
 
   return (
     <div className="section-body">
-      <div className="page-head">
+            <div className="page-head">
         <div>
           <h1>Atmosphere &amp; orbital environment</h1>
           <p className="page-context">
@@ -27,20 +27,21 @@ export default function AroundEarth() {
               : "Catalogued objects and debris in Earth orbit (ESA, CelesTrak) and live NOAA space weather that drives orbital drag."}
           </p>
         </div>
-        <div className="segmented" role="tablist" aria-label="Around Earth views">
-          {VIEWS.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              role="tab"
-              aria-selected={view === item.id}
-              className={view === item.id ? "is-active" : undefined}
-              onClick={() => setView(item.id)}
-            >
-              {item.label}
-            </button>
-          ))}
-        </div>
+      </div>
+
+      <div className="around-earth-tabs" role="tablist" aria-label="Around Earth views">
+        {VIEWS.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            role="tab"
+            aria-selected={view === item.id}
+            className={view === item.id ? "is-active" : undefined}
+            onClick={() => setView(item.id)}
+          >
+            {item.label}
+          </button>
+        ))}
       </div>
 
       {view === "atmosphere" ? (

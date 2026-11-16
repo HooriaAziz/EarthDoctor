@@ -1,0 +1,32 @@
+# ---------------------------------------------------------------------------
+# Earth Doctor — server configuration (copy to .env and fill in).
+# Read ONLY by the Node server in /server. Never bundled into the browser
+# app (no VITE_ prefix), so keys stay private.
+# ---------------------------------------------------------------------------
+
+# --- NVIDIA NIM / Nemotron -------------------------------------------------
+# Create a key at https://build.nvidia.com (starts with "nvapi-").
+NVIDIA_API_KEY=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
+NVIDIA_BASE_URL=https://integrate.api.nvidia.com/v1
+# Light model: 30B mixture-of-experts with ~3B active parameters.
+NEMOTRON_MODEL=nvidia/nemotron-3.5-lightning-30b-a3b
+
+# --- MongoDB Atlas ----------------------------------------------------------
+# Atlas → Connect → Drivers → Node.js. Replace <db_password> (including the
+# angle brackets) with the database user's password; URL-encode @ : / ? # %.
+# mongodb+srv://<user>:<db_password>@<cluster>.mongodb.net/?retryWrites=true&w=majority
+# If unset or unreachable, the server caches in memory instead.
+MONGODB_URI=mongodb+srv://angelshresthacs_db_user:<db_password>@cluster0.pg1i6sb.mongodb.net/
+MONGODB_DB=earthdoctor
+
+# --- API server -------------------------------------------------------------
+PORT=8787
+
+# --- Cost controls ----------------------------------------------------------
+# A country's suggestions are generated ONCE when first requested, then served
+# from the cache for this many hours before Nemotron is called again.
+ACTIONS_CACHE_HOURS=12
+# Max simultaneous Nemotron requests.
+ACTIONS_CONCURRENCY=2
+# Upper bound on generated tokens per country.
+ACTIONS_MAX_TOKENS=3000

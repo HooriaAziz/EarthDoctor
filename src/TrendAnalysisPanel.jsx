@@ -132,7 +132,7 @@ export default function TrendAnalysisPanel({
       <section className="trend-analysis-panel">
         <div className="trend-panel-heading">
           <div>
-            <p className="trend-panel-eyebrow">HISTORICAL TREND ANALYSIS</p>
+            <p className="trend-panel-eyebrow">How it changed over time</p>
             <h3>{title}</h3>
             {description && <p>{description}</p>}
           </div>
@@ -161,6 +161,14 @@ export default function TrendAnalysisPanel({
       ? "Change from first observation"
       : comparisonLabel || `Change since ${comparisonStartYear}`;
 
+  const kidSummary = !result.isSignificant
+    ? "This one goes up and down, so scientists can't say it is clearly rising or falling."
+    : result.direction === "increasing"
+      ? "Over the years, this number has mostly been going up ▲"
+      : result.direction === "decreasing"
+        ? "Over the years, this number has mostly been going down ▼"
+        : "Over the years, this number has stayed about the same.";
+
   const ci = result.senSlopeConfidenceInterval;
   const significanceText = result.isSignificant
     ? "Statistically significant at α = 0.05"
@@ -170,7 +178,7 @@ export default function TrendAnalysisPanel({
     <section className="trend-analysis-panel">
       <div className="trend-panel-heading">
         <div>
-          <p className="trend-panel-eyebrow">HISTORICAL TREND ANALYSIS</p>
+          <p className="trend-panel-eyebrow">How it changed over time</p>
           <h3>{title}</h3>
           {description && <p>{description}</p>}
         </div>
@@ -178,6 +186,8 @@ export default function TrendAnalysisPanel({
           {result.isSignificant ? result.direction : "no significant trend"}
         </span>
       </div>
+
+      <p className="trend-kid-summary">{kidSummary}</p>
 
       <div className="trend-stat-grid">
         <article className="trend-stat-card">
@@ -295,6 +305,12 @@ export default function TrendAnalysisPanel({
         )}
       </div>
 
+      {interpretation && (
+        <p className="trend-interpretation">{interpretation}</p>
+      )}
+
+      <details className="trend-grownups">
+        <summary>For grown-ups and scientists: the math behind this</summary>
       <div className="trend-analysis-details">
         <div>
           <span>95% Sen slope confidence interval</span>
@@ -319,16 +335,13 @@ export default function TrendAnalysisPanel({
         </div>
       </div>
 
-      {interpretation && (
-        <p className="trend-interpretation">{interpretation}</p>
-      )}
-
       <p className="trend-method-note">
         Method: Mann–Kendall trend test with Sen's slope. The p-value is a
         two-sided asymptotic approximation. Serial autocorrelation is not
         adjusted for, so interpret significance as exploratory rather than
         definitive. The Sen slope interval is approximate.
       </p>
+      </details>
 
       {sourceNote && <p className="trend-source-note">{sourceNote}</p>}
       {sourceName && (

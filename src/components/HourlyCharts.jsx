@@ -107,13 +107,13 @@ export default function HourlyCharts({ location, state }) {
       ) : (
         <div className="chart-grid">
           <ChartCell title="Air temperature · 2 m" series={series.temp} unit="°C" digits={1} nowValue={weather?.current?.temperature_2m}>
-            <TimeSeriesChart label="Air temperature, degrees Celsius" times={series.temp.times} values={series.temp.values} unit="°C" digits={1} color="#398CF0" nowTime={wxNow} tzAbbr={tz} />
+            <TimeSeriesChart label="Air temperature, degrees Celsius" times={series.temp.times} values={series.temp.values} unit="°C" digits={1} color="#4668b8" nowTime={wxNow} tzAbbr={tz} />
           </ChartCell>
           <ChartCell title="Relative humidity · 2 m" series={series.humidity} unit="%" digits={0} nowValue={weather?.current?.relative_humidity_2m}>
-            <TimeSeriesChart label="Relative humidity, percent" times={series.humidity.times} values={series.humidity.values} unit="%" digits={0} color="#13B981" nowTime={wxNow} tzAbbr={tz} zeroBased />
+            <TimeSeriesChart label="Relative humidity, percent" times={series.humidity.times} values={series.humidity.values} unit="%" digits={0} color="#3fb68b" nowTime={wxNow} tzAbbr={tz} zeroBased />
           </ChartCell>
           <ChartCell title="Precipitation · hourly total" series={series.precip} unit="mm" digits={1} nowValue={weather?.current?.precipitation}>
-            <TimeSeriesChart label="Hourly precipitation, millimetres" type="bar" times={series.precip.times} values={series.precip.values} unit="mm" digits={1} color="#2563D9" nowTime={wxNow} tzAbbr={tz} />
+            <TimeSeriesChart label="Hourly precipitation, millimetres" type="bar" times={series.precip.times} values={series.precip.values} unit="mm" digits={1} color="#7d8ca6" nowTime={wxNow} tzAbbr={tz} />
           </ChartCell>
           <ChartCell title="US AQI · CAMS model" series={series.aqi} unit="" digits={0} nowValue={air?.current?.us_aqi}>
             <TimeSeriesChart
@@ -121,13 +121,13 @@ export default function HourlyCharts({ location, state }) {
               times={series.aqi.times}
               values={series.aqi.values}
               digits={0}
-              color="#E8B341"
+              color="#d9a441"
               nowTime={aqNow}
               tzAbbr={tz}
               zeroBased
               thresholds={[
-                { value: 100, label: "100 · USG", color: "#E8B341" },
-                { value: 150, label: "150 · Unhealthy", color: "#E54858" },
+                { value: 100, label: "100 · USG", color: "#d9a441" },
+                { value: 150, label: "150 · Unhealthy", color: "#e0606f" },
               ]}
             />
           </ChartCell>
